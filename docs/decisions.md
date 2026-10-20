@@ -31,3 +31,9 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Chose:** `requirements.txt` / `requirements-dev.txt` with pinned versions.
 - **Rejected:** uv and poetry.
 - **Why:** These are the simplest tools with nothing new to learn. Switching later is cheap.
+
+## 006 — Hybrid dev setup: venv for code, Docker for infrastructure (2026-10-20)
+- **Chose:** Run Django, pytest and ruff from a local `.venv`. Docker runs only `db-test` (Postgres on localhost:5433) and, from M3, Redis. The `web` service and Dockerfile stay for building the production image.
+- **Rejected:** Running the Django server inside Docker during development.
+- **Why:** Commands start in about a second and run dozens of times per weekend. Breakpoints, tracebacks and editor imports work without container setup. Docker is used where it adds value: disposable services and the deploy image. The Dockerfile uses Python 3.11 to match the local venv.
+- **Watch out:** Tests and dev use different databases, so run `migrate` against Supabase after each new migration to catch problems tests can't.

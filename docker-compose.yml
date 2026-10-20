@@ -6,13 +6,12 @@ services:
       - "8000:8000"
     volumes:
       - .:/app  # live code reload in dev
-    depends_on:
-      db-test:
-        condition: service_healthy
 
   # Local Postgres used ONLY by pytest. Dev data lives on Supabase.
   db-test:
     image: postgres:16
+    ports:
+      - "5433:5432"  # host port 5433 so it never clashes with a local Postgres on 5432
     environment:
       POSTGRES_USER: ledger
       POSTGRES_PASSWORD: ledger

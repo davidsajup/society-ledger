@@ -12,7 +12,7 @@ from .settings import env  # noqa: E402
 DATABASES = {
     "default": env.db(
         "TEST_DATABASE_URL",
-        default="postgres://ledger:ledger@db-test:5432/ledger_test",
+        default="postgres://ledger:ledger@localhost:5433/ledger_test",
     )
 }
 

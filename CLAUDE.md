@@ -27,7 +27,8 @@ Out of scope for now: complaints workflow, online payment processing, social fea
 - PostgreSQL is hosted on **Supabase** (dev and prod). Django connects through the **session pooler** (port 5432 on `*.pooler.supabase.com`), never the transaction pooler (6543).
 - **Supabase Storage** will hold receipt files later (via its S3-compatible API).
 - Auth, permissions, tenant scoping and scheduled billing stay in **Django/DRF/Celery**. Do not use Supabase Auth, RLS-as-primary-isolation, pg_cron, Edge Functions or the auto-generated REST API.
-- Tests run against a **local Postgres container** (`db-test` in docker-compose), never against Supabase.
+- Tests run against a **local Postgres container** (`db-test` in docker-compose, published on localhost:5433), never against Supabase.
+- Django, pytest and ruff run from a local `.venv`; Docker provides only infrastructure (db-test now, Redis in M3) and the production image.
 
 # How you should work with me
 
@@ -64,7 +65,10 @@ I have about 16 hours a week: roughly 10 on this project (weekends) and 6 on DSA
 
 # Commands
 
-- Run app (talks to Supabase): `docker compose up --build web`
-- Migrate: `docker compose run --rm web python manage.py migrate`
-- Tests (local db-test): `docker compose run --rm web pytest`
-- Lint: `docker compose run --rm web ruff check .`
+Development runs in the local `.venv` (Windows paths shown); Docker only provides infrastructure containers.
+
+- Start test DB: `docker compose up -d db-test`
+- Run app (talks to Supabase): `.venv/Scripts/python.exe manage.py runserver`
+- Migrate: `.venv/Scripts/python.exe manage.py migrate`
+- Tests (local db-test on localhost:5433): `.venv/Scripts/python.exe -m pytest`
+- Lint: `.venv/Scripts/python.exe -m ruff check .`
