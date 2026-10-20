@@ -61,3 +61,16 @@ python manage.py seed_demo --password "choose-a-password"
 ```
 
 Log in as `asha` (admin), `tara` (treasurer) or `ravi`, `meera`, `kiran`, `priya`, `john`, `nisha` (residents). The command does nothing if the society already exists. Billing can be run by hand with `python manage.py run_billing --period 2026-11`; running it twice bills once.
+
+## Demo mode (for visitors with no login)
+
+Demo mode puts one-click role cards on the login page and a "Demo" strip inside the app. It is OFF unless you turn it on, and it only works for the usernames you list. Add to your `.env` (never on a database with real data):
+
+```bash
+DEMO_MODE=True
+DEMO_USERS=asha,tara,ravi,nisha
+```
+
+Then run `seed_demo` (above) so those users exist. Django prints a warning on every start while demo mode is on. A public demo should use its own database, reseeded regularly, because visitors can change the data.
+
+**Troubleshooting:** if the page is blank after many edits, the Vite dev server may be serving stale files (a Windows file-watcher quirk). Stop `npm run dev` and start it again.

@@ -13,11 +13,14 @@ import {
 } from "@mantine/core";
 import {
   IconBuildingEstate,
+  IconCalendarDollar,
   IconCash,
   IconChartPie,
+  IconHistory,
   IconHome,
   IconLogout,
   IconMoon,
+  IconNotebook,
   IconReceipt2,
   IconSun,
   IconSwitchHorizontal,
@@ -29,6 +32,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "../api/hooks";
 import type { Role } from "../api/types";
 import { useMembership, useSession } from "../auth/session";
+import { DemoBanner } from "../components/DemoBanner";
 
 interface NavItem {
   to: string;
@@ -36,22 +40,30 @@ interface NavItem {
   icon: ComponentType<{ size?: number; stroke?: number }>;
 }
 
+// At most 5 items so the phone's bottom bar stays usable. The admin reaches Expenses from the
+// "Spent" card on Overview rather than from the bar.
 function navFor(role: Role): NavItem[] {
   switch (role) {
     case "resident":
-      return [{ to: "home", label: "My home", icon: IconHome }];
+      return [
+        { to: "home", label: "My home", icon: IconHome },
+        { to: "statement", label: "Statement", icon: IconNotebook },
+      ];
     case "treasurer":
       return [
         { to: "overview", label: "Overview", icon: IconChartPie },
+        { to: "dues", label: "Dues", icon: IconCalendarDollar },
         { to: "payments", label: "Payments", icon: IconCash },
         { to: "expenses", label: "Expenses", icon: IconReceipt2 },
+        { to: "activity", label: "Activity", icon: IconHistory },
       ];
     case "admin":
       return [
         { to: "overview", label: "Overview", icon: IconChartPie },
-        { to: "expenses", label: "Expenses", icon: IconReceipt2 },
+        { to: "dues", label: "Dues", icon: IconCalendarDollar },
         { to: "flats", label: "Flats", icon: IconBuildingEstate },
         { to: "residents", label: "Residents", icon: IconUsers },
+        { to: "activity", label: "Activity", icon: IconHistory },
       ];
   }
 }
@@ -156,6 +168,8 @@ export function AppLayout() {
           </Group>
         </Container>
       </Paper>
+
+      <DemoBanner />
 
       <Container size="md" py="lg" className="page">
         <Outlet />

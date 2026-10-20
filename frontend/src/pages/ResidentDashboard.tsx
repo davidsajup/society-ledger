@@ -1,13 +1,8 @@
-import { Badge, Card, Group, Stack, Text, ThemeIcon, Title } from "@mantine/core";
-import {
-  IconArrowBackUp,
-  IconCircleCheck,
-  IconCoin,
-  IconReceipt,
-} from "@tabler/icons-react";
+import { Button, Card, Group, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { IconCircleCheck, IconReceipt } from "@tabler/icons-react";
+import { Link } from "react-router-dom";
 
 import { useLedger } from "../api/hooks";
-import type { LedgerEntry } from "../api/types";
 import { useMembership } from "../auth/session";
 import {
   CardSkeleton,
@@ -16,18 +11,8 @@ import {
   Money,
   formatDate,
 } from "../components/common";
+import { describeEntry } from "../components/entries";
 import { toCents } from "../lib/money";
-
-function describe(entry: LedgerEntry) {
-  if (entry.reverses !== null) {
-    return entry.kind === "charge"
-      ? { title: "Payment reversed", icon: IconArrowBackUp, color: "orange", sign: "+" }
-      : { title: "Charge cancelled", icon: IconArrowBackUp, color: "teal", sign: "−" };
-  }
-  return entry.kind === "charge"
-    ? { title: "Maintenance due", icon: IconReceipt, color: "gray", sign: "+" }
-    : { title: "Payment received", icon: IconCoin, color: "teal", sign: "−" };
-}
 
 export function ResidentDashboard() {
   const membership = useMembership();
@@ -41,6 +26,7 @@ export function ResidentDashboard() {
 
   const { flat, outstanding, entries } = ledger.data;
   const owes = toCents(outstanding) > 0n;
+  const recent = entries.slice(0, 5);
 
   return (
     <Stack gap="lg">
@@ -69,22 +55,27 @@ export function ResidentDashboard() {
       </Card>
 
       <Stack gap="xs">
-        <Title order={3}>Your history</Title>
-        {entries.length === 0 ? (
+        <Group justify="space-between" align="center">
+          <Title order={3}>Recent activity</Title>
+          <Button component={Link} to={`/s/${membership.society_id}/statement`} variant="light" size="compact-md">
+            Full statement &amp; receipts
+          </Button>
+        </Group>
+        {recent.length === 0 ? (
           <EmptyState title="Nothing yet">Charges and payments will appear here.</EmptyState>
         ) : (
-          entries.map((entry) => {
-            const d = describe(entry);
+          recent.map((entry) => {
+            const look = describeEntry(entry);
             return (
               <Card key={entry.id} padding="md">
                 <Group justify="space-between" wrap="nowrap" align="center">
                   <Group gap="sm" wrap="nowrap" miw={0}>
-                    <ThemeIcon variant="light" color={d.color} radius="xl" size="lg">
-                      <d.icon size={18} />
+                    <ThemeIcon variant="light" color={look.color} radius="xl" size="lg">
+                      <look.icon size={18} />
                     </ThemeIcon>
                     <div style={{ minWidth: 0 }}>
                       <Text fw={700} truncate>
-                        {d.title}
+                        {look.title}
                       </Text>
                       <Text size="xs" c="dimmed" truncate>
                         {formatDate(entry.created_at)}
@@ -92,18 +83,11 @@ export function ResidentDashboard() {
                       </Text>
                     </div>
                   </Group>
-                  <Group gap={6} wrap="nowrap">
-                    <Text fw={800} c={d.sign === "−" ? "teal.7" : undefined} className="money">
-                      {d.sign}
-                      <Money value={entry.amount} />
-                    </Text>
-                  </Group>
+                  <Text fw={800} c={look.sign === "−" ? "teal.7" : undefined} className="money">
+                    {look.sign}
+                    <Money value={entry.amount} />
+                  </Text>
                 </Group>
-                {entry.reverses !== null && (
-                  <Badge variant="light" color="gray" mt="xs" size="sm" w="fit-content">
-                    Correction
-                  </Badge>
-                )}
               </Card>
             );
           })

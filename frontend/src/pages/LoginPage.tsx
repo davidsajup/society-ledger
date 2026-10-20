@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Center,
+  Group,
   PasswordInput,
   Stack,
   Text,
@@ -14,6 +15,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
+import { DemoPicker } from "../components/DemoPicker";
 import { useLogin, useMe } from "../api/hooks";
 
 export function LoginPage() {
@@ -43,7 +45,11 @@ export function LoginPage() {
 
   return (
     <Center mih="100dvh" p="md">
-      <Card maw={420} w="100%" padding="xl" shadow="sm">
+      {/* Demo card first (left on wide screens, on top on phones) so visitors see it at once.
+          Both cards share one row when there is room and wrap when there is not. */}
+      <Group align="flex-start" justify="center" gap="md" w="100%" maw={920} py="md">
+      <DemoPicker />
+      <Card padding="xl" shadow="sm" style={{ flex: "1 1 340px", maxWidth: 420 }}>
         <form onSubmit={submit}>
           <Stack gap="md">
             <Stack gap={4} align="center">
@@ -82,6 +88,7 @@ export function LoginPage() {
           </Stack>
         </form>
       </Card>
+      </Group>
     </Center>
   );
 }

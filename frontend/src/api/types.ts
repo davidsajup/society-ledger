@@ -23,6 +23,7 @@ export interface LedgerEntry {
   amount: string;
   note: string;
   reverses: number | null;
+  recorded_by: string; // "system" for entries made by the billing job
   created_at: string;
 }
 
@@ -93,4 +94,64 @@ export interface Member {
   user: string;
   role: Role;
   flat: number | null;
+}
+
+export interface AuditRow {
+  id: number;
+  action:
+    | "payment.recorded"
+    | "entry.reversed"
+    | "billing.run"
+    | "expense.recorded"
+    | "expense.reversed";
+  actor: string; // "system" for the billing job
+  flat: number | null;
+  object_type: string;
+  object_id: number;
+  amount: string | null;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface BillingRun {
+  id: number;
+  period: string; // first day of the billed month, "2026-10-01"
+  flats_charged: number;
+  total_amount: string;
+  created_at: string;
+}
+
+export type DuesStatus = "paid" | "partial" | "unpaid" | "none";
+
+export interface DuesCell {
+  period: string;
+  billed: string;
+  paid: string;
+  due: string;
+  status: DuesStatus;
+}
+
+export interface DuesFlat {
+  id: number;
+  label: string;
+  outstanding: string;
+  cells: DuesCell[];
+}
+
+export interface Dues {
+  periods: string[];
+  flats: DuesFlat[];
+  summary: { flats: number; flats_with_dues: number; oldest_unpaid: string | null };
+}
+
+export interface DemoAccount {
+  username: string;
+  role: Role;
+  society_name: string;
+  flat_label: string | null;
+}
+
+export interface DemoInfo {
+  enabled: boolean;
+  accounts: DemoAccount[];
 }

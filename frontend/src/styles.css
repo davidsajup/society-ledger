@@ -38,3 +38,29 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Receipts and statements are meant to be printed or saved as PDF: show only the document. */
+@media print {
+  header,
+  .bottom-nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .page {
+    padding: 0 !important;
+  }
+
+  .receipt {
+    border: 1px solid #999 !important;
+    box-shadow: none !important;
+  }
+
+  * {
+    color-scheme: light !important;
+  }
+}

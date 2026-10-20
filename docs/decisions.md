@@ -236,3 +236,26 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Chose:** `summary/` (billed, collected, outstanding, spent, per flat) and `activity/` (newest payments) in a model-less `reports` app. All figures are net of reversals. `seed_demo` builds a demo society through the real services (billing, payments, a reversal, expenses), so the audit log is populated too, inside one transaction.
 - **Rejected:** Seeding with raw inserts (would skip the invariants); a default demo password (the password is passed with `--password` or `DEMO_PASSWORD`).
 - **Limit:** the ledger is append-only, so a seeded society cannot be wiped; use another `--slug`, or drop the local database.
+
+## 045 — Demo mode: passwordless one-click logins, off by default (2026-10-20)
+- **Chose:** `DEMO_MODE` (default False) plus an explicit `DEMO_USERS` allowlist. `POST /auth/demo-login/` logs in an allowlisted username without a password, and only if that user is active and is neither staff nor superuser. `GET /auth/demo/` tells the login page whether to show the role cards. A banner inside the app says it is fake data and offers "Switch role". A system check (`accounts.W001`) prints a warning on every startup while it is on. The endpoint is throttled, and every refusal is the same 404.
+- **Rejected:** Publishing a shared demo password on the login page or in the JavaScript bundle; an always-on endpoint; exempting staff accounts.
+- **Why:** A new visitor (a recruiter) has no credentials, and "ask the developer" is a dead end. A server-side switch keeps production safe by default, and no secret is ever published.
+- **Tested:** unlisted, staff, superuser, inactive and made-up users are all refused identically; matching is exact (no case, partial or wildcard matches); off means 404 and no session is created.
+- **Limits:** Visitors can change demo data. A deployed demo needs its OWN database, reseeded regularly. The ledger is append-only, so a reset means recreating the database, not deleting rows. Never enable it on a database with real data.
+
+## 046 — Statements and receipts are derived, printable pages (2026-10-20)
+- **Chose:** The statement's running balance is computed BACKWARDS from the server's outstanding amount, so it stays exact even though the API returns only the newest 200 entries. Receipts are numbered `R-<ledger entry id>` and show who received the money and the balance after; a reversed payment's receipt is stamped VOID. Printing uses the browser (print CSS, "Save as PDF"). The ledger API now returns `recorded_by` (with `select_related`, so no extra query per row).
+- **Rejected:** A PDF library; a separate receipt table; counting forwards from zero.
+- **Why:** The ledger already holds everything a receipt needs. A second store would be a second truth.
+
+## 047 — Dues by month are DERIVED by paying the oldest dues first (2026-10-20)
+- **Chose:** `GET /dues/` allocates each flat's net collected money across its billed months, oldest first, and reports paid / partial / unpaid per month. Reversed charges reduce their ORIGINAL month; reversed payments reduce what was collected. Months older than the 12 shown are still allocated first and still counted in `outstanding`.
+- **Rejected:** Storing which month a payment is for; letting the treasurer allocate by hand.
+- **Why:** It is a view, so it cannot drift from the ledger. Tested invariant: for every flat and across five awkward scenarios, the unpaid amounts add up exactly to the ledger balance.
+- **Limit:** It is a convention, not a fact: a resident who meant to pay only October still shows August cleared. Societies usually work this way, and the page says so.
+
+## 048 — Activity timeline and billing history are read-only views of existing data (2026-10-20)
+- **Chose:** The audit log is rendered as sentences grouped by day, with filters; `GET /billing-runs/` lists which months were billed. Admin and treasurer only. The page states that the log cannot be edited or deleted.
+- **Rejected:** A separate "activity" table (the audit log already is one); letting residents see it.
+- **Why:** It surfaces the strongest property of the system (nothing happens without a trace) without new write paths.

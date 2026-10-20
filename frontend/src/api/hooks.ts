@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError, api, forgetCsrfToken } from "./client";
 import type {
+  AuditRow,
+  BillingRun,
+  DemoInfo,
+  Dues,
   ExpenseCategory,
   ExpenseList,
   Flat,
@@ -20,10 +24,14 @@ const base = (societyId: number) => `/societies/${societyId}`;
 // another and a whole tenant can be dropped at once.
 export const keys = {
   me: ["me"] as const,
+  demo: ["demo"] as const,
   ledger: (s: number, flatId: number) => ["ledger", s, flatId] as const,
   summary: (s: number) => ["summary", s] as const,
   activity: (s: number) => ["activity", s] as const,
   expenses: (s: number) => ["expenses", s] as const,
+  dues: (s: number) => ["dues", s] as const,
+  audit: (s: number) => ["audit", s] as const,
+  billingRuns: (s: number) => ["billing-runs", s] as const,
   flats: (s: number) => ["flats", s] as const,
   members: (s: number) => ["members", s] as const,
 };
@@ -42,6 +50,36 @@ export function useMe() {
       }
     },
     staleTime: 60_000,
+  });
+}
+
+/** Is demo mode on, and which one-click accounts exist? Any failure just means "not a demo". */
+export function useDemo() {
+  return useQuery({
+    queryKey: keys.demo,
+    queryFn: async (): Promise<DemoInfo> => {
+      try {
+        return await api<DemoInfo>("/auth/demo/");
+      } catch {
+        return { enabled: false, accounts: [] };
+      }
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useDemoLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) =>
+      api<Me>("/auth/demo-login/", { method: "POST", body: { username } }),
+    onSuccess: (me) => {
+      const demo = queryClient.getQueryData<DemoInfo>(keys.demo);
+      forgetCsrfToken(); // Django rotates the CSRF token on login
+      queryClient.clear();
+      queryClient.setQueryData(keys.me, me);
+      if (demo) queryClient.setQueryData(keys.demo, demo); // keep the banner's data
+    },
   });
 }
 
@@ -94,6 +132,27 @@ export function useActivity(societyId: number) {
   });
 }
 
+export function useDues(societyId: number) {
+  return useQuery({
+    queryKey: keys.dues(societyId),
+    queryFn: () => api<Dues>(`${base(societyId)}/dues/`),
+  });
+}
+
+export function useAudit(societyId: number) {
+  return useQuery({
+    queryKey: keys.audit(societyId),
+    queryFn: () => api<AuditRow[]>(`${base(societyId)}/audit/`),
+  });
+}
+
+export function useBillingRuns(societyId: number) {
+  return useQuery({
+    queryKey: keys.billingRuns(societyId),
+    queryFn: () => api<BillingRun[]>(`${base(societyId)}/billing-runs/`),
+  });
+}
+
 export function useExpenses(societyId: number) {
   return useQuery({
     queryKey: keys.expenses(societyId),
@@ -126,6 +185,8 @@ function useInvalidateMoney(societyId: number) {
       queryClient.invalidateQueries({ queryKey: keys.activity(societyId) }),
       queryClient.invalidateQueries({ queryKey: ["ledger", societyId] }),
       queryClient.invalidateQueries({ queryKey: keys.expenses(societyId) }),
+      queryClient.invalidateQueries({ queryKey: keys.dues(societyId) }),
+      queryClient.invalidateQueries({ queryKey: keys.audit(societyId) }),
     ]);
 }
 

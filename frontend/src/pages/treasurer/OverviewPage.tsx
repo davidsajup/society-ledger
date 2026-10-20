@@ -1,6 +1,7 @@
 import { Badge, Button, Card, Group, Progress, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { IconCash } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useSummary } from "../../api/hooks";
 import { useMembership } from "../../auth/session";
@@ -39,7 +40,13 @@ export function OverviewPage() {
           value={totals.outstanding}
           color={toCents(totals.outstanding) > 0n ? "sunrise.7" : undefined}
         />
-        <StatCard label="Spent" value={totals.spent} />
+        <Link
+          to={`/s/${societyId}/expenses`}
+          style={{ textDecoration: "none", color: "inherit" }}
+          aria-label="Spent: view expenses"
+        >
+          <StatCard label="Spent" value={totals.spent} hint="View expenses →" />
+        </Link>
       </SimpleGrid>
 
       <Card>
@@ -94,18 +101,29 @@ export function OverviewPage() {
                         )}
                       </Text>
                     </div>
-                    {canRecord && owes && (
+                    <Stack gap={2} align="flex-end">
+                      {canRecord && owes && (
+                        <Button
+                          size="compact-md"
+                          variant="light"
+                          leftSection={<IconCash size={16} />}
+                          onClick={() =>
+                            setPaying({ id: flat.id, label: flat.label, outstanding: flat.outstanding })
+                          }
+                        >
+                          Record
+                        </Button>
+                      )}
                       <Button
-                        size="compact-md"
-                        variant="light"
-                        leftSection={<IconCash size={16} />}
-                        onClick={() =>
-                          setPaying({ id: flat.id, label: flat.label, outstanding: flat.outstanding })
-                        }
+                        component={Link}
+                        to={`/s/${societyId}/flat/${flat.id}/statement`}
+                        size="compact-xs"
+                        variant="subtle"
+                        color="gray"
                       >
-                        Record
+                        Statement
                       </Button>
-                    )}
+                    </Stack>
                   </Group>
                   <Progress
                     mt="sm"
