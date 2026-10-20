@@ -24,6 +24,7 @@ from apps.expenses.services import record_expense
 from apps.ledger import urls as ledger_urls
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services import record_charge
+from apps.reports import urls as reports_urls
 from apps.societies import urls as societies_urls
 from apps.societies.models import Flat, Membership, Society
 from apps.societies.services import add_member
@@ -44,6 +45,8 @@ ROUTES = {
     "expense-list": lambda b: {"society_id": b["society"].id},
     "expense-reverse": lambda b: {"society_id": b["society"].id, "expense_id": b["expense"].id},
     "audit-list": lambda b: {"society_id": b["society"].id},
+    "summary": lambda b: {"society_id": b["society"].id},
+    "activity": lambda b: {"society_id": b["society"].id},
 }
 
 PAYLOAD = {
@@ -196,7 +199,7 @@ def test_leaked_response_bodies_never_mention_other_tenants_data(attacker, tenan
 
 
 def test_every_societies_route_is_covered_by_this_suite():
-    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls)
+    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls, reports_urls)
     declared = {p.name for module in modules for p in module.urlpatterns}
     assert declared == set(ROUTES), (
         f"Routes without cross-tenant tests: {declared - set(ROUTES)}; "

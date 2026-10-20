@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.billing",
     "apps.audit",
     "apps.expenses",
+    "apps.reports",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

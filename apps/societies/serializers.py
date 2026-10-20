@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError
 from rest_framework import serializers
 
 from .models import Flat, Membership
@@ -23,6 +24,17 @@ class FlatSerializer(serializers.ModelSerializer):
         if clash.exists():
             raise serializers.ValidationError("A flat with this label already exists.")
         return value
+
+
+def _api_errors(exc):
+    """Turn a Django ValidationError into {field: [messages]} using the API's field names."""
+    if not hasattr(exc, "error_dict"):
+        return {"non_field_errors": exc.messages}
+    errors = {}
+    for field, messages in exc.message_dict.items():
+        name = {"user": "username", "__all__": "non_field_errors"}.get(field, field)
+        errors[name] = messages
+    return errors
 
 
 class MembershipSerializer(serializers.ModelSerializer):
@@ -53,4 +65,9 @@ class MembershipSerializer(serializers.ModelSerializer):
                 flat=validated_data.get("flat"),
             )
         except DjangoValidationError as exc:
-            raise serializers.ValidationError(exc.messages) from exc
+            raise serializers.ValidationError(_api_errors(exc)) from exc
+        except IntegrityError:
+            # Two requests added the same person at once: the DB constraint caught the loser.
+            raise serializers.ValidationError(
+                {"username": ["This person is already a member of this society."]}
+            ) from None

@@ -1,6 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import IntegrityError, connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.test import APIClient
@@ -172,7 +172,46 @@ def test_adding_same_user_twice_is_400(admin, green_park):
 
     response = admin.post(members_url(green_park), {"username": "newbie", "role": "admin"})
 
+    # The message must be keyed to the field the UI shows it on. A bare list of messages (the
+    # old behaviour) was refused by the server but displayed nothing to the user.
     assert response.status_code == 400
+    assert response.json() == {"username": ["This person is already a member of this society."]}
+    assert Membership.objects.filter(user__username="newbie").count() == 1
+
+
+def test_a_concurrent_duplicate_caught_by_the_database_is_still_a_readable_400(
+    admin, green_park, monkeypatch
+):
+    """Two admins add the same person at the same instant: the DB constraint rejects the loser."""
+    make_user("newbie")
+
+    def lose_the_race(**kwargs):
+        raise IntegrityError("duplicate key value violates unique constraint")
+
+    monkeypatch.setattr("apps.societies.serializers.add_member", lose_the_race)
+
+    response = admin.post(members_url(green_park), {"username": "newbie", "role": "admin"})
+
+    assert response.status_code == 400
+    assert "already a member" in response.json()["username"][0]
+
+
+def test_every_member_error_is_keyed_to_a_field_the_ui_can_show(admin, green_park):
+    make_user("newbie")
+    flat = Flat.objects.create(society=green_park, label="A-1")
+
+    unknown = admin.post(members_url(green_park), {"username": "ghost", "role": "admin"})
+    flat_on_admin = admin.post(
+        members_url(green_park), {"username": "newbie", "role": "admin", "flat": flat.id}
+    )
+    resident_without_flat = admin.post(
+        members_url(green_park), {"username": "newbie", "role": "resident"}
+    )
+
+    assert "username" in unknown.json()
+    assert "flat" in flat_on_admin.json()
+    assert resident_without_flat.status_code == 400
+    assert all(isinstance(value, (list, str)) for value in resident_without_flat.json().values())
 
 
 def test_unknown_username_is_400(admin, green_park):
