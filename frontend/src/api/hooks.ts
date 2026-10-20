@@ -1,0 +1,208 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { ApiError, api, forgetCsrfToken } from "./client";
+import type {
+  ExpenseCategory,
+  ExpenseList,
+  Flat,
+  FlatLedger,
+  LedgerEntry,
+  Me,
+  Member,
+  RecentPayment,
+  Role,
+  Summary,
+} from "./types";
+
+const base = (societyId: number) => `/societies/${societyId}`;
+
+// Query keys always start with the society id, so one tenant's cache can never be shown for
+// another and a whole tenant can be dropped at once.
+export const keys = {
+  me: ["me"] as const,
+  ledger: (s: number, flatId: number) => ["ledger", s, flatId] as const,
+  summary: (s: number) => ["summary", s] as const,
+  activity: (s: number) => ["activity", s] as const,
+  expenses: (s: number) => ["expenses", s] as const,
+  flats: (s: number) => ["flats", s] as const,
+  members: (s: number) => ["members", s] as const,
+};
+
+// --- Session -----------------------------------------------------------------------------
+
+export function useMe() {
+  return useQuery({
+    queryKey: keys.me,
+    queryFn: async (): Promise<Me | null> => {
+      try {
+        return await api<Me>("/auth/me/");
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 403) return null; // not logged in
+        throw error;
+      }
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (credentials: { username: string; password: string }) =>
+      api<Me>("/auth/login/", { method: "POST", body: credentials }),
+    onSuccess: (me) => {
+      forgetCsrfToken(); // Django rotates the CSRF token on login
+      queryClient.clear();
+      queryClient.setQueryData(keys.me, me);
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<null>("/auth/logout/", { method: "POST" }),
+    onSuccess: () => {
+      forgetCsrfToken();
+      queryClient.clear(); // nothing from this session may survive into the next login
+      queryClient.setQueryData(keys.me, null);
+    },
+  });
+}
+
+// --- Reads ---------------------------------------------------------------------------------
+
+export function useLedger(societyId: number, flatId: number | null) {
+  return useQuery({
+    queryKey: keys.ledger(societyId, flatId ?? 0),
+    queryFn: () => api<FlatLedger>(`${base(societyId)}/flats/${flatId}/ledger/`),
+    enabled: flatId !== null,
+  });
+}
+
+export function useSummary(societyId: number) {
+  return useQuery({
+    queryKey: keys.summary(societyId),
+    queryFn: () => api<Summary>(`${base(societyId)}/summary/`),
+  });
+}
+
+export function useActivity(societyId: number) {
+  return useQuery({
+    queryKey: keys.activity(societyId),
+    queryFn: () => api<RecentPayment[]>(`${base(societyId)}/activity/`),
+  });
+}
+
+export function useExpenses(societyId: number) {
+  return useQuery({
+    queryKey: keys.expenses(societyId),
+    queryFn: () => api<ExpenseList>(`${base(societyId)}/expenses/`),
+  });
+}
+
+export function useFlats(societyId: number) {
+  return useQuery({
+    queryKey: keys.flats(societyId),
+    queryFn: () => api<Flat[]>(`${base(societyId)}/flats/`),
+  });
+}
+
+export function useMembers(societyId: number) {
+  return useQuery({
+    queryKey: keys.members(societyId),
+    queryFn: () => api<Member[]>(`${base(societyId)}/members/`),
+  });
+}
+
+// --- Writes --------------------------------------------------------------------------------
+
+/** Money changed: everything derived from the ledger is stale. */
+function useInvalidateMoney(societyId: number) {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: keys.summary(societyId) }),
+      queryClient.invalidateQueries({ queryKey: keys.activity(societyId) }),
+      queryClient.invalidateQueries({ queryKey: ["ledger", societyId] }),
+      queryClient.invalidateQueries({ queryKey: keys.expenses(societyId) }),
+    ]);
+}
+
+export function useRecordPayment(societyId: number) {
+  const invalidate = useInvalidateMoney(societyId);
+  return useMutation({
+    mutationFn: (v: { flatId: number; amount: string; note: string; idempotencyKey: string }) =>
+      api<LedgerEntry>(`${base(societyId)}/flats/${v.flatId}/payments/`, {
+        method: "POST",
+        body: { amount: v.amount, note: v.note },
+        // The same key is reused if this exact submission is retried: no double payment.
+        headers: { "Idempotency-Key": v.idempotencyKey },
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReverseEntry(societyId: number) {
+  const invalidate = useInvalidateMoney(societyId);
+  return useMutation({
+    mutationFn: (v: { entryId: number; note: string }) =>
+      api<LedgerEntry>(`${base(societyId)}/entries/${v.entryId}/reverse/`, {
+        method: "POST",
+        body: { note: v.note },
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRecordExpense(societyId: number) {
+  const invalidate = useInvalidateMoney(societyId);
+  return useMutation({
+    mutationFn: (v: {
+      category: ExpenseCategory;
+      description: string;
+      amount: string;
+      paid_on: string;
+      idempotencyKey: string;
+    }) => {
+      const { idempotencyKey, ...body } = v;
+      return api(`${base(societyId)}/expenses/`, {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": idempotencyKey },
+      });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useReverseExpense(societyId: number) {
+  const invalidate = useInvalidateMoney(societyId);
+  return useMutation({
+    mutationFn: (expenseId: number) =>
+      api(`${base(societyId)}/expenses/${expenseId}/reverse/`, { method: "POST", body: {} }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSaveFlat(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id?: number; label: string; monthly_maintenance: string }) => {
+      const { id, ...body } = v;
+      return id === undefined
+        ? api<Flat>(`${base(societyId)}/flats/`, { method: "POST", body })
+        : api<Flat>(`${base(societyId)}/flats/${id}/`, { method: "PATCH", body });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.flats(societyId) }),
+  });
+}
+
+export function useAddMember(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { username: string; role: Role; flat: number | null }) =>
+      api<Member>(`${base(societyId)}/members/`, { method: "POST", body: v }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.members(societyId) }),
+  });
+}

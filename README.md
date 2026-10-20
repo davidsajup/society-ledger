@@ -39,3 +39,25 @@ python -m ruff check .
 ```
 
 Docker also builds the production image (`docker compose build web`), but day-to-day development uses the venv.
+
+## Frontend (React)
+
+The UI lives in `frontend/` (React + TypeScript + Vite + Mantine). In development Vite proxies `/api` to Django, so both must be running.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. Other commands: `npm run typecheck` and `npm run build`.
+
+## Demo data
+
+Create a demo society (12 flats, an admin, a treasurer, six residents, three billed months, payments and expenses). Pick your own password; it is not stored anywhere:
+
+```bash
+python manage.py seed_demo --password "choose-a-password"
+```
+
+Log in as `asha` (admin), `tara` (treasurer) or `ravi`, `meera`, `kiran`, `priya`, `john`, `nisha` (residents). The command does nothing if the society already exists. Billing can be run by hand with `python manage.py run_billing --period 2026-11`; running it twice bills once.

@@ -205,3 +205,34 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Rejected:** Editing or deleting expenses; locking a parent row.
 - **Why:** Unlike payments there is no balance to protect, so a lock buys nothing; the unique constraints decide every race. Mutation check: removing the loser's read-back fails the 10-thread test.
 - **Limit:** Categories are validated by Django choices only (no DB CHECK); the list can change without a migration.
+
+## 039 — Frontend: React + TypeScript + Vite + Mantine + TanStack Query, in `frontend/` (2026-10-20)
+- **Chose:** React 19, Vite, TypeScript (strict), React Router, TanStack Query and Mantine, all versions pinned exactly. Cards everywhere (no data tables), a header on wide screens and a bottom navigation bar on phones. A warm "friendly community" theme with a dark-mode toggle.
+- **Rejected:** shadcn/ui + Tailwind (more assembly for the same result in a limited UI budget); a charts library (collections vs outstanding is a plain progress bar); a form library (the three forms are small); a frontend test runner for now.
+- **Why:** The UI is the smallest part of this project and should cost the least time. Mantine gives accessible, mobile-friendly components out of the box.
+- **Not yet covered:** there are no automated frontend tests (only `tsc` and manual browser checks).
+
+## 040 — In development, Vite proxies /api to Django (2026-10-20)
+- **Chose:** The browser only talks to Vite; `/api` is forwarded to Django. Session cookie and CSRF are therefore same-origin, with no CORS dependency.
+- **Rejected:** `django-cors-headers` with cross-origin cookies.
+- **Why:** Simplest thing that works with decision 017 (session auth). The client fetches `/auth/csrf/`, sends `X-CSRFToken` on writes, forgets the token after login and logout (Django rotates it), and retries once on a stale-token 403.
+- **Revisit at M5:** if the frontend is deployed on a different domain from the API, cookies become cross-site and either a shared parent domain or token auth is needed.
+
+## 041 — Money is a string in the browser, never a JS number (2026-10-20)
+- **Chose:** Amounts stay decimal strings end to end. `lib/money.ts` does formatting, validation and comparison with BigInt cents; Indian digit grouping; headline cards drop a redundant ".00" but non-zero paise are always shown. Every payment or expense form creates an `Idempotency-Key` when it opens.
+- **Rejected:** `Number`/`parseFloat`, `NumberInput` components (they return floats).
+- **Why:** Floats cannot represent most cents. The idempotency key makes a double tap or retry harmless, which is the M2 guarantee reaching the UI.
+
+## 042 — UI role guards are convenience; the server is the authority (2026-10-20)
+- **Chose:** The society id lives in the URL (`/s/:societyId/...`, mirroring the API). `RequireRole` redirects instead of showing broken pages, but every request is still checked server-side (decisions 009, 012).
+- **Why:** A guard in the browser can be bypassed by anyone; it only exists for usability.
+
+## 043 — Every API error is field-keyed, and the UI has one reader for all shapes (2026-10-20)
+- **Incident:** Adding an existing member was refused by the server (400, no row added) but the response was a bare list, and the dialog only displayed errors keyed by field name, so the user saw nothing.
+- **Chose:** Domain errors are raised keyed by field (`add_member` -> `user`/`flat`, mapped to the API's `username`); unique-constraint races are caught and mapped to the same message. In the frontend, `ApiError.fieldErrors()` accepts every DRF shape (object, string, bare list, `detail`) and `generalError()` shows anything not tied to an input, so no error can be dropped silently.
+- **Why it slipped through:** the test only asserted `status_code == 400`. Tests for failures now assert the response **body**.
+
+## 044 — Read-only `reports` app and a `seed_demo` command (2026-10-20)
+- **Chose:** `summary/` (billed, collected, outstanding, spent, per flat) and `activity/` (newest payments) in a model-less `reports` app. All figures are net of reversals. `seed_demo` builds a demo society through the real services (billing, payments, a reversal, expenses), so the audit log is populated too, inside one transaction.
+- **Rejected:** Seeding with raw inserts (would skip the invariants); a default demo password (the password is passed with `--password` or `DEMO_PASSWORD`).
+- **Limit:** the ledger is append-only, so a seeded society cannot be wiped; use another `--slug`, or drop the local database.

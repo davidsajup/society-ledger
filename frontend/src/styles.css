@@ -1,0 +1,40 @@
+/* A warm off-white page behind the cards (dark mode keeps Mantine's own dark body). */
+:root[data-mantine-color-scheme="light"] body {
+  background: #fffaf5;
+}
+
+/* Leave room above the phone bottom-nav and its safe area. */
+.page {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 48em) {
+  .page {
+    padding-bottom: 2rem;
+  }
+}
+
+.bottom-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav a {
+  text-decoration: none;
+}
+
+/* Big, friendly balance figure. */
+.balance {
+  font-size: clamp(2.25rem, 9vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

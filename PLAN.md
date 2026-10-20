@@ -1,8 +1,10 @@
 # Plan
 
-**Current task:** M5 — GitHub Actions CI + deployment (next: design the CI workflow, the production Docker image, and the Render + Supabase prod setup)
+**Current task:** M6 — React frontend (first slice built and manually tested; refine the screens next)
 
-**Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction). 301 tests.
+**On hold:** M5 — GitHub Actions CI + deployment. Resume afterwards: CI workflow, production image, Render + Supabase prod project, and the cross-site cookie decision (040).
+
+**Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction); reports (summary, activity) and `seed_demo`; frontend first slice (login, resident dashboard, treasurer overview/payments/expenses, admin flats/residents). 345 backend tests.
 
 Budget: ~10 h/week on this project. Job applications start early February 2027 (~15 weekends from 2026-10-20).
 Rule: backend milestones (M1–M5) are protected. If we slip, M6 (frontend) shrinks first.
