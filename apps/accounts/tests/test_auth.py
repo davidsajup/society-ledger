@@ -19,7 +19,7 @@ def society():
 @pytest.fixture
 def admin_user(society):
     user = get_user_model().objects.create_user(username="asha", password="correct-horse")
-    add_member(society=society, user=user, role="admin")
+    add_member(society=society, user=user, role="secretary")
     return user
 
 
@@ -36,7 +36,7 @@ def test_login_returns_identity_and_memberships(admin_user, society):
         {
             "society_id": society.id,
             "society_name": "Green Park",
-            "role": "admin",
+            "role": "secretary",
             "flat_id": None,
             "flat_label": None,
         }
@@ -61,7 +61,7 @@ def test_me_only_returns_the_callers_own_memberships(admin_user, society):
 
     roles = [m["role"] for m in client.get(reverse("auth-me")).data["memberships"]]
 
-    assert roles == ["admin"]
+    assert roles == ["secretary"]
 
 
 def test_wrong_password_and_unknown_user_look_identical(admin_user):

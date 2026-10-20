@@ -44,10 +44,16 @@ class Flat(models.Model):
 
 
 class Membership(models.Model):
-    """Links a user to a society with one role. Roles are per society, not global."""
+    """Links a user to a society with one role. Roles are per society, not global.
+
+    `flat` is where the person LIVES. A resident must have one; an office-bearer (president,
+    secretary, treasurer) is also a resident who pays dues, so for them it is optional but
+    normally set.
+    """
 
     class Role(models.TextChoices):
-        ADMIN = "admin"
+        PRESIDENT = "president"
+        SECRETARY = "secretary"
         TREASURER = "treasurer"
         RESIDENT = "resident"
 
@@ -70,7 +76,7 @@ class Membership(models.Model):
             ),
             # `choices` is only checked by Django; this makes Postgres refuse unknown roles too.
             models.CheckConstraint(
-                condition=Q(role__in=["admin", "treasurer", "resident"]),
+                condition=Q(role__in=["president", "secretary", "treasurer", "resident"]),
                 name="membership_role_valid",
             ),
             # A resident must be attached to a flat; the database refuses it otherwise.

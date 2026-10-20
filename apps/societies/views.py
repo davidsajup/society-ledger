@@ -11,12 +11,20 @@ from . import roles
 from .models import Flat, Membership
 from .permissions import HasCapability, IsSocietyMember
 from .serializers import (
+    ChangeMemberSerializer,
     CreateLoginSerializer,
     FlatSerializer,
     MembershipSerializer,
     _api_errors,
 )
-from .services import CredentialsNotAllowed, create_member_login, reissue_credentials
+from .services import (
+    _UNSET,
+    CredentialsNotAllowed,
+    MembershipChangeNotAllowed,
+    change_member,
+    create_member_login,
+    reissue_credentials,
+)
 
 
 class SocietyScopedView:
@@ -88,7 +96,7 @@ def _credentials_response(user, temporary_password, **extra):
 
 
 class CreateLoginView(SocietyScopedView, APIView):
-    """POST /people/ (admin): create a brand-new login with a one-time temporary password."""
+    """POST /people/ (president, secretary): a brand-new login with a one-time password."""
 
     required_capabilities = {"POST": roles.MANAGE_MEMBERS}
 
@@ -119,7 +127,7 @@ class CreateLoginView(SocietyScopedView, APIView):
 
 
 class ReissueCredentialsView(SocietyScopedView, APIView):
-    """POST /members/<id>/reissue/ (admin): new temporary password for one member."""
+    """POST /members/<id>/reissue/ (president, secretary): new temporary password for one member."""
 
     required_capabilities = {"POST": roles.MANAGE_MEMBERS}
 
@@ -139,3 +147,34 @@ class ReissueCredentialsView(SocietyScopedView, APIView):
         except CredentialsNotAllowed as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return _credentials_response(membership.user, temporary_password)
+
+
+class MemberDetailView(SocietyScopedView, APIView):
+    """PATCH /members/<id>/ (president, secretary): change someone's role and/or flat."""
+
+    required_capabilities = {"PATCH": roles.MANAGE_MEMBERS}
+
+    def patch(self, request, society_id, member_id):
+        membership = (
+            Membership.objects.for_society(request.society)
+            .select_related("user", "flat")
+            .filter(pk=member_id)
+            .first()
+        )
+        if membership is None:
+            raise NotFound()  # another society's member id looks exactly like a missing one
+        data = ChangeMemberSerializer(data=request.data, context={"society": request.society})
+        data.is_valid(raise_exception=True)
+        try:
+            membership, _changed = change_member(
+                society=request.society,
+                actor=request.user,
+                membership=membership,
+                role=data.validated_data.get("role"),
+                flat=data.validated_data.get("flat", _UNSET),
+            )
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(_api_errors(exc)) from exc
+        except MembershipChangeNotAllowed as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(MembershipSerializer(membership, context={"society": request.society}).data)

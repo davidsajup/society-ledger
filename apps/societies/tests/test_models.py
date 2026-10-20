@@ -40,7 +40,7 @@ def test_same_flat_label_is_allowed_in_different_societies(society_a, society_b)
 
 
 def test_user_has_at_most_one_membership_per_society(society_a, user):
-    Membership.objects.create(user=user, society=society_a, role="admin")
+    Membership.objects.create(user=user, society=society_a, role="secretary")
     with pytest.raises(IntegrityError), transaction.atomic():
         Membership.objects.create(user=user, society=society_a, role="treasurer")
 
@@ -66,10 +66,20 @@ def test_add_member_rejects_flat_from_another_society(society_a, society_b, user
     assert not Membership.objects.exists()
 
 
-def test_add_member_rejects_flat_for_non_resident(society_a, user):
+@pytest.mark.parametrize("role", ["president", "secretary", "treasurer"])
+def test_an_office_bearer_may_live_in_a_flat(society_a, user, role):
+    """Office-bearers are also residents who pay their own dues, so a flat is allowed."""
     flat = Flat.objects.create(society=society_a, label="A-101")
-    with pytest.raises(ValidationError):
-        add_member(society=society_a, user=user, role="admin", flat=flat)
+
+    membership = add_member(society=society_a, user=user, role=role, flat=flat)
+
+    assert (membership.role, membership.flat) == (role, flat)
+
+
+def test_an_office_bearer_may_also_have_no_flat(society_a, user):
+    membership = add_member(society=society_a, user=user, role="president")
+
+    assert membership.flat is None
 
 
 def test_add_member_creates_resident_with_own_flat(society_a, user):

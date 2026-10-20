@@ -15,7 +15,7 @@ from django.contrib.auth import get_user_model
 
 from apps.societies.models import Membership
 
-ROLE_ORDER = {"admin": 0, "treasurer": 1, "resident": 2}
+ROLE_ORDER = {"president": 0, "secretary": 1, "treasurer": 2, "resident": 3}
 
 
 def demo_enabled() -> bool:
@@ -33,7 +33,7 @@ def demo_users():
 
 
 def demo_accounts() -> list[dict]:
-    """One entry per demo user (their first membership), ordered admin, treasurer, residents."""
+    """One entry per demo user (their first membership), most senior role first."""
     seen, accounts = set(), []
     memberships = (
         Membership.objects.filter(user__in=demo_users())

@@ -11,7 +11,7 @@ LIST_PAGE = 200  # newest rows returned; real pagination can come when there are
 
 
 class AuditLogListView(SocietyScopedView, APIView):
-    """GET /audit/  (admin, treasurer). Read-only: there is no way to write through HTTP."""
+    """GET /audit/  (office-bearers). Read-only: there is no way to write through HTTP."""
 
     required_capabilities = {"GET": roles.VIEW_AUDIT}
 

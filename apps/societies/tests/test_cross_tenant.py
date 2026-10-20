@@ -51,12 +51,13 @@ ROUTES = {
     "billing-runs": lambda b: {"society_id": b["society"].id},
     "person-create": lambda b: {"society_id": b["society"].id},
     "member-reissue": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
+    "member-detail": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
 }
 
 PAYLOAD = {
     "label": "HACKED",
     "username": "attacker-target",
-    "role": "admin",
+    "role": "secretary",
     "amount": "10.00",
     "note": "HACKED",
     "category": "other",
@@ -106,7 +107,7 @@ def tenant_b():
     society = Society.objects.create(name="Lake View", slug="lake-view")
     flat = Flat.objects.create(society=society, label="B-101")
     admin = make_user("b_admin")
-    add_member(society=society, user=admin, role="admin")
+    add_member(society=society, user=admin, role="secretary")
     resident = make_user("b_resident")
     member = add_member(society=society, user=resident, role="resident", flat=flat)
     entry = record_charge(society=society, flat=flat, amount=Decimal("100.00"))
@@ -120,7 +121,7 @@ def tenant_b():
     }
 
 
-@pytest.fixture(params=["admin", "treasurer"])
+@pytest.fixture(params=["president", "secretary", "treasurer"])
 def attacker(request):
     """The strongest roles of society A: full power in their own tenant, no membership in B.
 

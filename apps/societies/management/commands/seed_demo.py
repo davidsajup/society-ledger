@@ -24,10 +24,12 @@ FLATS = [
     for n in (1, 2)
 ]
 
-# username -> (role, flat label or None)
+# username -> (role, flat label or None). Office-bearers are also residents: each lives in a
+# flat of their own and pays dues like anyone else.
 PEOPLE = {
-    "asha": ("admin", None),
-    "tara": ("treasurer", None),
+    "vikram": ("president", "B-201"),
+    "asha": ("secretary", "A-301"),
+    "tara": ("treasurer", "A-302"),
     "ravi": ("resident", "A-101"),
     "meera": ("resident", "A-102"),
     "kiran": ("resident", "A-201"),
@@ -52,9 +54,9 @@ def previous_month(first_of_month):
 
 class Command(BaseCommand):
     help = (
-        "Create a demo society with flats, one login per role, three billed months, some "
-        "payments and expenses. Built through the real services. Safe to re-run: does nothing "
-        "if the society already exists."
+        "Create a demo society with flats, a president, secretary, treasurer and residents "
+        "(office-bearers live in flats too), three billed months, some payments and expenses. "
+        "Built through the real services. Safe to re-run: does nothing if it already exists."
     )
 
     def add_arguments(self, parser):
@@ -94,7 +96,13 @@ class Command(BaseCommand):
                 role=role,
                 flat=flats[flat_label] if flat_label else None,
             )
-        treasurer = users["tara"]
+        treasurer, secretary = users["tara"], users["asha"]
+        lives_in = {label: name for name, (_, label) in PEOPLE.items() if label}
+
+        def recorder_for(label):
+            """Who records payments for a flat. The treasurer does, unless the treasurer lives
+            there: nobody may record payments for their own flat, so the secretary does."""
+            return secretary if lives_in.get(label) == "tara" else treasurer
 
         # Three months of billing: two previous months and the current one.
         this_month = current_period()
@@ -104,7 +112,7 @@ class Command(BaseCommand):
             run_billing(society=society, period=period)
 
         # Payment patterns so the dashboard shows a realistic spread.
-        reversed_one = None
+        reversed_one, reversed_label = None, None
         for index, (label, rent) in enumerate(FLATS):
             flat = flats[label]
             pattern = index % 4
@@ -113,19 +121,26 @@ class Command(BaseCommand):
             months_paid = (3, 2, 1)[pattern]
             for _ in range(months_paid):
                 payment, _ = record_payment(
-                    society=society, flat=flat, amount=rent, actor=treasurer, note="Maintenance"
+                    society=society,
+                    flat=flat,
+                    amount=rent,
+                    actor=recorder_for(label),
+                    note="Maintenance",
                 )
                 if index == 1:
-                    reversed_one = payment
+                    reversed_one, reversed_label = payment, label
             if pattern == 2:
                 # A partial payment on top of one full month: pays half of the next.
                 record_payment(
                     society=society, flat=flat, amount=(rent / 2).quantize(D("0.01")),
-                    actor=treasurer, note="Part payment",
+                    actor=recorder_for(label), note="Part payment",
                 )
         if reversed_one is not None:
             reverse_entry(
-                society=society, entry=reversed_one, actor=treasurer, note="Cheque bounced"
+                society=society,
+                entry=reversed_one,
+                actor=recorder_for(reversed_label),
+                note="Cheque bounced",
             )
 
         today = timezone.localdate()

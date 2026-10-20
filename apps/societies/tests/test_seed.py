@@ -30,7 +30,7 @@ def test_seed_builds_a_realistic_society_through_the_real_services():
     society = Society.objects.get(slug="sunrise-heights")
     assert Flat.objects.for_society(society).count() == 12
     roles = sorted(Membership.objects.for_society(society).values_list("role", flat=True))
-    assert roles == ["admin"] + ["resident"] * 6 + ["treasurer"]
+    assert roles == ["president"] + ["resident"] * 6 + ["secretary", "treasurer"]
     assert BillingRun.objects.for_society(society).count() == 3
     assert Expense.objects.for_society(society).count() == 5
     # Built through the services, so the audit trail exists too.
@@ -98,3 +98,37 @@ def test_a_failed_seed_leaves_nothing_behind(monkeypatch):
 
     assert not Society.objects.exists()
     assert not LedgerEntry.objects.exists()
+
+
+def test_every_office_bearer_lives_in_a_flat_of_their_own():
+    seed()
+    society = Society.objects.get(slug="sunrise-heights")
+
+    office = Membership.objects.for_society(society).exclude(role="resident")
+
+    assert sorted(m.role for m in office) == ["president", "secretary", "treasurer"]
+    assert all(m.flat_id is not None for m in office)
+    assert len({m.flat_id for m in office}) == 3  # three different flats
+
+
+def test_no_payment_was_recorded_by_someone_living_in_that_flat():
+    """The seed obeys the same rule as the app: nobody credits their own flat."""
+    seed()
+    society = Society.objects.get(slug="sunrise-heights")
+    lives_in = {m.user_id: m.flat_id for m in Membership.objects.for_society(society)}
+
+    for entry in LedgerEntry.objects.for_society(society).filter(created_by__isnull=False):
+        assert lives_in.get(entry.created_by_id) != entry.flat_id, entry
+
+
+def test_the_treasurers_own_dues_were_recorded_by_the_secretary():
+    seed()
+    society = Society.objects.get(slug="sunrise-heights")
+    treasurer = Membership.objects.for_society(society).get(role="treasurer")
+
+    payers = set(
+        LedgerEntry.objects.filter(flat=treasurer.flat, kind="payment")
+        .values_list("created_by__username", flat=True)
+    )
+
+    assert payers == {"asha"}

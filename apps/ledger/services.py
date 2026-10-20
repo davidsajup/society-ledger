@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 from apps.audit import services as audit
 from apps.audit.models import AuditLog
 from apps.core.money import validate_amount
-from apps.societies.models import Flat
+from apps.societies.models import Flat, Membership
 
 from .models import LedgerEntry
 from .selectors import outstanding_for_flat
@@ -20,12 +20,34 @@ class PaymentExceedsOutstanding(LedgerError):
         super().__init__(f"Payment exceeds the amount owed ({outstanding}).")
 
 
+class SelfPaymentNotAllowed(LedgerError):
+    """The actor lives in this flat, so someone else must record or reverse its payments."""
+
+
 class ReversalNotAllowed(LedgerError):
     """Already reversed, is itself a reversal, or reversing it would leave the flat in credit."""
 
 
 class IdempotencyKeyReused(LedgerError):
     """The same key was sent with a different request, which is a client bug."""
+
+
+def refuse_own_flat(society, actor, flat_id):
+    """Segregation of duties: nobody may record or reverse payments for the flat they live in.
+
+    Office-bearers are also residents who pay dues. If the treasurer could mark their own flat
+    as paid (or cancel their own charge), the person being credited would be the person doing
+    the crediting. Another office-bearer must do it. Applies to every role, and to anyone who
+    shares the flat. The check is on the ACTOR's membership, so it cannot be skipped by
+    choosing a different flat id.
+    """
+    if actor is None:  # system jobs have no actor and no flat
+        return
+    if Membership.objects.for_society(society).filter(user=actor, flat_id=flat_id).exists():
+        raise SelfPaymentNotAllowed(
+            "You cannot record or reverse a payment for the flat you live in. "
+            "Ask another office-bearer to do it."
+        )
 
 
 def check_flat_in_society(society, flat):
@@ -70,6 +92,7 @@ def record_payment(*, society, flat, amount, actor, idempotency_key=None, note="
     """
     validate_amount(amount)
     check_flat_in_society(society, flat)
+    refuse_own_flat(society, actor, flat.pk)
 
     # The lock. Re-fetching through for_society() also guarantees the flat is in this society.
     flat = Flat.objects.for_society(society).select_for_update().get(pk=flat.pk)
@@ -138,6 +161,7 @@ def reverse_entry(*, society, entry, actor, note=""):
     """
     # Looked up through for_society(): an entry of another society is simply not found.
     original = LedgerEntry.objects.for_society(society).get(pk=entry.pk)
+    refuse_own_flat(society, actor, original.flat_id)
     flat = Flat.objects.for_society(society).select_for_update().get(pk=original.flat_id)
 
     if original.reverses_id is not None:

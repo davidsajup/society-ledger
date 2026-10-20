@@ -34,7 +34,7 @@ def lake_view():
 @pytest.fixture
 def admin(green_park):
     user = make_user("admin")
-    add_member(society=green_park, user=user, role="admin")
+    add_member(society=green_park, user=user, role="secretary")
     return client_for(user)
 
 
@@ -170,7 +170,7 @@ def test_adding_same_user_twice_is_400(admin, green_park):
     make_user("newbie")
     admin.post(members_url(green_park), {"username": "newbie", "role": "treasurer"})
 
-    response = admin.post(members_url(green_park), {"username": "newbie", "role": "admin"})
+    response = admin.post(members_url(green_park), {"username": "newbie", "role": "secretary"})
 
     # The message must be keyed to the field the UI shows it on. A bare list of messages (the
     # old behaviour) was refused by the server but displayed nothing to the user.
@@ -190,7 +190,7 @@ def test_a_concurrent_duplicate_caught_by_the_database_is_still_a_readable_400(
 
     monkeypatch.setattr("apps.societies.serializers.add_member", lose_the_race)
 
-    response = admin.post(members_url(green_park), {"username": "newbie", "role": "admin"})
+    response = admin.post(members_url(green_park), {"username": "newbie", "role": "secretary"})
 
     assert response.status_code == 400
     assert "already a member" in response.json()["username"][0]
@@ -198,24 +198,26 @@ def test_a_concurrent_duplicate_caught_by_the_database_is_still_a_readable_400(
 
 def test_every_member_error_is_keyed_to_a_field_the_ui_can_show(admin, green_park):
     make_user("newbie")
-    flat = Flat.objects.create(society=green_park, label="A-1")
+    other = Society.objects.create(name="Lake View", slug="lake-view")
+    foreign_flat = Flat.objects.create(society=other, label="B-1")
 
-    unknown = admin.post(members_url(green_park), {"username": "ghost", "role": "admin"})
-    flat_on_admin = admin.post(
-        members_url(green_park), {"username": "newbie", "role": "admin", "flat": flat.id}
+    unknown = admin.post(members_url(green_park), {"username": "ghost", "role": "secretary"})
+    foreign = admin.post(
+        members_url(green_park), {"username": "newbie", "role": "resident", "flat": foreign_flat.id}
     )
     resident_without_flat = admin.post(
         members_url(green_park), {"username": "newbie", "role": "resident"}
     )
 
     assert "username" in unknown.json()
-    assert "flat" in flat_on_admin.json()
+    assert foreign.status_code == 400 and "flat" in foreign.json()
+    assert not Membership.objects.filter(user__username="newbie").exists()
     assert resident_without_flat.status_code == 400
     assert all(isinstance(value, (list, str)) for value in resident_without_flat.json().values())
 
 
 def test_unknown_username_is_400(admin, green_park):
-    response = admin.post(members_url(green_park), {"username": "ghost", "role": "admin"})
+    response = admin.post(members_url(green_park), {"username": "ghost", "role": "secretary"})
 
     assert response.status_code == 400
 

@@ -37,7 +37,7 @@ def world():
     society = Society.objects.create(name="Sunrise Heights", slug="sunrise-heights")
     flat = Flat.objects.create(society=society, label="A-101")
     people = {}
-    for name, role, own in [("asha", "admin", None), ("tara", "treasurer", None)]:
+    for name, role, own in [("asha", "secretary", None), ("tara", "treasurer", None)]:
         people[name] = make_user(name)
         add_member(society=society, user=people[name], role=role, flat=own)
     return {"society": society, "flat": flat, "people": people, "admin": client_for(people["asha"])}
@@ -155,13 +155,16 @@ def test_only_an_admin_can_create_logins(world, who):
     assert not User.objects.filter(username__startswith="ravi").exists()
 
 
-def test_a_resident_login_needs_a_flat_and_a_non_resident_must_not_have_one(world):
-    no_flat = create_login(world, flat=False)
-    admin_with_flat = create_login(world, role="admin", flat=True)
+def test_a_resident_login_needs_a_flat_but_an_office_bearers_flat_is_optional(world):
+    resident_no_flat = create_login(world, name="Ravi Kumar", flat=False)
+    secretary_with_flat = create_login(world, name="Meera Rao", role="secretary", flat=True)
+    president_no_flat = create_login(world, name="Kiran Das", role="president", flat=False)
 
-    assert no_flat.status_code == 400 and "flat" in no_flat.json()
-    assert admin_with_flat.status_code == 400 and "flat" in admin_with_flat.json()
+    assert resident_no_flat.status_code == 400 and "flat" in resident_no_flat.json()
     assert not User.objects.filter(username__startswith="ravi").exists()
+    assert secretary_with_flat.status_code == 201
+    assert secretary_with_flat.json()["member"]["flat"] == world["flat"].id
+    assert president_no_flat.status_code == 201
 
 
 def test_a_flat_from_another_society_is_rejected(world):
@@ -217,7 +220,7 @@ def test_a_temporary_login_works_but_is_flagged_as_must_change(world):
 def test_every_society_endpoint_refuses_a_user_on_a_temporary_password(world, route):
     """Proves the rule is enforced by the server, so skipping the change screen gains nothing."""
     user = make_user("temp-admin")
-    add_member(society=world["society"], user=user, role="admin")
+    add_member(society=world["society"], user=user, role="secretary")
     User.objects.filter(pk=user.pk).update(must_change_password=True)
     user.refresh_from_db()
 
@@ -509,7 +512,7 @@ def test_reissue_refuses_a_person_who_also_belongs_to_another_society(world):
 @pytest.mark.parametrize("flags", [{"is_staff": True}, {"is_superuser": True}])
 def test_reissue_never_touches_staff_or_superuser_accounts(world, flags):
     boss = make_user("boss", password="boss-Passphrase-123", **flags)
-    member = add_member(society=world["society"], user=boss, role="admin")
+    member = add_member(society=world["society"], user=boss, role="secretary")
 
     response = world["admin"].post(reissue_url(world, member.id))
 

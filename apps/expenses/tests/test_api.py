@@ -37,7 +37,7 @@ def world():
     flat = Flat.objects.create(society=society, label="A-101", monthly_maintenance=D("100.00"))
     people = {}
     for name, role, own_flat in [
-        ("admin", "admin", None),
+        ("admin", "secretary", None),
         ("treasurer", "treasurer", None),
         ("resident", "resident", flat),
     ]:

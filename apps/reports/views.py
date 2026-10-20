@@ -16,7 +16,7 @@ from .serializers import (
 
 
 class SummaryView(SocietyScopedView, APIView):
-    """GET /summary/ (admin, treasurer): billed / collected / outstanding / spent, per flat too."""
+    """GET /summary/ (office-bearers): billed / collected / outstanding / spent, per flat too."""
 
     required_capabilities = {"GET": roles.VIEW_ALL_BALANCES}
 
@@ -25,7 +25,7 @@ class SummaryView(SocietyScopedView, APIView):
 
 
 class ActivityView(SocietyScopedView, APIView):
-    """GET /activity/ (admin, treasurer): the newest payments across the society."""
+    """GET /activity/ (office-bearers): the newest payments across the society."""
 
     required_capabilities = {"GET": roles.VIEW_ALL_BALANCES}
 
@@ -35,7 +35,7 @@ class ActivityView(SocietyScopedView, APIView):
 
 
 class DuesView(SocietyScopedView, APIView):
-    """GET /dues/ (admin, treasurer): flats by month, paid / partial / unpaid. Read-only."""
+    """GET /dues/ (office-bearers): flats by month, paid / partial / unpaid. Read-only."""
 
     required_capabilities = {"GET": roles.VIEW_ALL_BALANCES}
 
@@ -44,7 +44,7 @@ class DuesView(SocietyScopedView, APIView):
 
 
 class BillingRunsView(SocietyScopedView, APIView):
-    """GET /billing-runs/ (admin, treasurer): which months were billed, newest first."""
+    """GET /billing-runs/ (office-bearers): which months were billed, newest first."""
 
     required_capabilities = {"GET": roles.VIEW_ALL_BALANCES}
 

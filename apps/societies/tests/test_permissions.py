@@ -52,12 +52,12 @@ def test_anonymous_user_is_rejected(green_park):
 
 def test_member_with_capability_gets_200(green_park):
     admin = make_user("admin")
-    add_member(society=green_park, user=admin, role="admin")
+    add_member(society=green_park, user=admin, role="secretary")
 
     response = call(admin, green_park.id)
 
     assert response.status_code == 200
-    assert response.data == {"society": green_park.id, "role": "admin"}
+    assert response.data == {"society": green_park.id, "role": "secretary"}
 
 
 def test_member_without_capability_gets_403(green_park):
@@ -71,14 +71,14 @@ def test_member_without_capability_gets_403(green_park):
 def test_non_member_gets_404_for_another_tenants_society(green_park, lake_view):
     """CROSS-TENANT: an admin of Lake View cannot touch Green Park, and cannot tell it exists."""
     lake_admin = make_user("lake_admin")
-    add_member(society=lake_view, user=lake_admin, role="admin")
+    add_member(society=lake_view, user=lake_admin, role="secretary")
 
     assert call(lake_admin, green_park.id).status_code == 404
 
 
 def test_missing_society_looks_identical_to_forbidden_society(green_park):
     user = make_user("someone")
-    add_member(society=green_park, user=user, role="admin")
+    add_member(society=green_park, user=user, role="secretary")
 
     unknown = call(user, 999_999)
     assert unknown.status_code == 404
@@ -90,7 +90,7 @@ def test_role_in_one_society_does_not_leak_into_another(green_park, lake_view):
     user = make_user("both")
     flat = Flat.objects.create(society=green_park, label="A-101")
     add_member(society=green_park, user=user, role="resident", flat=flat)
-    add_member(society=lake_view, user=user, role="admin")
+    add_member(society=lake_view, user=user, role="secretary")
 
     assert call(user, lake_view.id).status_code == 200
     assert call(user, green_park.id).status_code == 403
@@ -119,7 +119,7 @@ class WrongOrderView(ProbeView):
 
 def test_wrong_permission_order_crashes_loudly_instead_of_defaulting(green_park):
     admin = make_user("admin")
-    add_member(society=green_park, user=admin, role="admin")
+    add_member(society=green_park, user=admin, role="secretary")
     request = APIRequestFactory().get("/probe/")
     force_authenticate(request, user=admin)
 
@@ -129,7 +129,7 @@ def test_wrong_permission_order_crashes_loudly_instead_of_defaulting(green_park)
 
 def test_http_method_not_listed_in_required_capabilities_is_denied(green_park):
     admin = make_user("admin")
-    add_member(society=green_park, user=admin, role="admin")
+    add_member(society=green_park, user=admin, role="secretary")
     request = APIRequestFactory().post("/probe/")
     force_authenticate(request, user=admin)
 

@@ -34,7 +34,7 @@ def world():
     b = Flat.objects.create(society=society, label="B-1", monthly_maintenance=D("200.00"))
     quiet = Flat.objects.create(society=society, label="C-1")
     people = {}
-    for name, role, flat in [("admin", "admin", None), ("treasurer", "treasurer", None),
+    for name, role, flat in [("admin", "secretary", None), ("treasurer", "treasurer", None),
                              ("resident", "resident", a)]:
         user = get_user_model().objects.create_user(username=name, password="x")
         add_member(society=society, user=user, role=role, flat=flat)

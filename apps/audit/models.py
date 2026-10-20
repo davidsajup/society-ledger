@@ -19,6 +19,7 @@ class AuditLog(AppendOnlyModel):
         EXPENSE_REVERSED = "expense.reversed"
         MEMBER_CREATED = "member.created"
         CREDENTIALS_REISSUED = "credentials.reissued"
+        MEMBER_UPDATED = "member.updated"
 
     society = models.ForeignKey(
         "societies.Society", on_delete=models.PROTECT, related_name="audit_logs"

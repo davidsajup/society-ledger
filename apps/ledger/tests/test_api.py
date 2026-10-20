@@ -29,7 +29,7 @@ def world():
     neighbour_flat = Flat.objects.create(society=society, label="A-102")
     users = {}
     for name, role, own_flat in [
-        ("admin", "admin", None),
+        ("admin", "secretary", None),
         ("treasurer", "treasurer", None),
         ("resident", "resident", flat),
         ("neighbour", "resident", neighbour_flat),
@@ -76,12 +76,19 @@ def test_treasurer_records_a_payment(world):
     assert outstanding_for_flat(world["flat"]) == D("70.00")
 
 
-@pytest.mark.parametrize("who", ["admin", "resident"])
-def test_only_the_treasurer_can_record_payments(world, who):
-    response = client(world, who).post(pay_url(world), {"amount": "30.00"}, format="json")
+def test_a_resident_cannot_record_payments(world):
+    response = client(world, "resident").post(pay_url(world), {"amount": "30.00"}, format="json")
 
     assert response.status_code == 403
     assert outstanding_for_flat(world["flat"]) == D("100.00")
+
+
+@pytest.mark.parametrize("who", ["treasurer", "admin"])  # "admin" is the secretary's client
+def test_office_bearers_can_record_payments(world, who):
+    response = client(world, who).post(pay_url(world), {"amount": "30.00"}, format="json")
+
+    assert response.status_code == 201
+    assert outstanding_for_flat(world["flat"]) == D("70.00")
 
 
 @pytest.mark.parametrize("bad", ["0", "-5", "0.001", "30.005", "abc", "", None, "1e400"])
@@ -237,11 +244,25 @@ def test_reversing_twice_is_409(world):
     assert treasurer.post(reverse_url(world, payment), {}, format="json").status_code == 409
 
 
-@pytest.mark.parametrize("who", ["admin", "resident"])
-def test_only_the_treasurer_can_reverse(world, who):
+def test_a_resident_cannot_reverse(world):
     entry = LedgerEntry.objects.filter(flat=world["flat"]).first()
 
-    assert client(world, who).post(reverse_url(world, entry), {}, format="json").status_code == 403
+    response = client(world, "resident").post(reverse_url(world, entry), {}, format="json")
+
+    assert response.status_code == 403
+
+
+def test_the_secretary_can_reverse_too(world):
+    payment, _ = record_payment(
+        society=world["society"],
+        flat=world["flat"],
+        amount=D("10.00"),
+        actor=world["users"]["treasurer"][0],
+    )
+
+    response = client(world, "admin").post(reverse_url(world, payment), {}, format="json")
+
+    assert response.status_code == 201
 
 
 def test_ledger_entries_cannot_be_edited_or_deleted_over_http(world):

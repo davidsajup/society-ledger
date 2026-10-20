@@ -16,7 +16,7 @@ LIST_PAGE = 200  # newest expenses returned; real pagination can come when there
 
 
 class ExpenseListCreateView(SocietyScopedView, APIView):
-    """GET /expenses/ (admin, treasurer); POST /expenses/ (treasurer). Header: Idempotency-Key."""
+    """GET /expenses/ (office-bearers); POST /expenses/ (treasurer). Header: Idempotency-Key."""
 
     required_capabilities = {"GET": roles.VIEW_EXPENSES, "POST": roles.RECORD_EXPENSE}
 

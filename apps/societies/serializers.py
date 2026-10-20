@@ -55,6 +55,26 @@ class CreateLoginSerializer(serializers.Serializer):
             self.fields["flat"].queryset = Flat.objects.for_society(society)
 
 
+class ChangeMemberSerializer(serializers.Serializer):
+    """Input for changing a member. Absent fields are left alone; `flat: null` clears the flat."""
+
+    role = serializers.ChoiceField(choices=Membership.Role.choices, required=False)
+    flat = serializers.PrimaryKeyRelatedField(
+        queryset=Flat.objects.none(), required=False, allow_null=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        society = self.context.get("society")
+        if society is not None:
+            self.fields["flat"].queryset = Flat.objects.for_society(society)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError({"role": ["Choose a role or a flat to change."]})
+        return attrs
+
+
 class MembershipSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     user = serializers.CharField(source="user.username", read_only=True)

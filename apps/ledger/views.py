@@ -62,6 +62,8 @@ class PaymentCreateView(SocietyScopedView, APIView):
             raise ValidationError(
                 {"amount": f"Exceeds the amount owed ({exc.outstanding})."}
             ) from exc
+        except services.SelfPaymentNotAllowed as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         except services.IdempotencyKeyReused:
             return Response(
                 {"detail": "Idempotency-Key was already used for a different request."},
@@ -115,6 +117,8 @@ class EntryReverseView(SocietyScopedView, APIView):
                 actor=request.user,
                 note=data.validated_data["note"],
             )
+        except services.SelfPaymentNotAllowed as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         except services.ReversalNotAllowed as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(LedgerEntrySerializer(reversal).data, status=status.HTTP_201_CREATED)

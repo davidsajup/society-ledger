@@ -23,11 +23,11 @@ def world():
     a1 = Flat.objects.create(society=society, label="A-101")
     a2 = Flat.objects.create(society=society, label="A-102")
     people = {name: make_user(name) for name in ("asha", "tara", "ravi", "nisha", "boss")}
-    add_member(society=society, user=people["asha"], role="admin")
+    add_member(society=society, user=people["asha"], role="secretary")
     add_member(society=society, user=people["tara"], role="treasurer")
     add_member(society=society, user=people["ravi"], role="resident", flat=a1)
     add_member(society=society, user=people["nisha"], role="resident", flat=a2)
-    add_member(society=society, user=people["boss"], role="admin")  # NOT on the allowlist
+    add_member(society=society, user=people["boss"], role="secretary")  # NOT on the allowlist
     # Accounts that are on the allowlist but must still be refused:
     make_user("root", is_superuser=True, is_staff=True)
     make_user("stafferd", is_staff=True)
@@ -83,7 +83,7 @@ def test_info_lists_only_safe_allowlisted_accounts_in_a_sensible_order(world, de
     accounts = info().json()["accounts"]
 
     assert [(a["username"], a["role"]) for a in accounts] == [
-        ("asha", "admin"),
+        ("asha", "secretary"),
         ("tara", "treasurer"),
         ("nisha", "resident"),
         ("ravi", "resident"),
