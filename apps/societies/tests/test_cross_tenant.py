@@ -49,6 +49,8 @@ ROUTES = {
     "activity": lambda b: {"society_id": b["society"].id},
     "dues": lambda b: {"society_id": b["society"].id},
     "billing-runs": lambda b: {"society_id": b["society"].id},
+    "person-create": lambda b: {"society_id": b["society"].id},
+    "member-reissue": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
 }
 
 PAYLOAD = {
@@ -59,6 +61,7 @@ PAYLOAD = {
     "note": "HACKED",
     "category": "other",
     "description": "HACKED",
+    "name": "HACKED",
     "paid_on": "2026-10-01",
 }
 
@@ -105,14 +108,14 @@ def tenant_b():
     admin = make_user("b_admin")
     add_member(society=society, user=admin, role="admin")
     resident = make_user("b_resident")
-    add_member(society=society, user=resident, role="resident", flat=flat)
+    member = add_member(society=society, user=resident, role="resident", flat=flat)
     entry = record_charge(society=society, flat=flat, amount=Decimal("100.00"))
     expense, _ = record_expense(
         society=society, actor=admin, category="repairs", description="Lift motor",
         amount=Decimal("500.00"), paid_on=date(2026, 10, 1),
     )
     return {
-        "society": society, "flat": flat, "entry": entry, "expense": expense,
+        "society": society, "flat": flat, "entry": entry, "expense": expense, "member": member,
         "admin": admin, "resident": resident,
     }
 

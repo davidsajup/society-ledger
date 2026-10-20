@@ -7,6 +7,11 @@ class DemoLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(trim_whitespace=False)
+    new_password = serializers.CharField(trim_whitespace=False, max_length=128)
+
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(trim_whitespace=False)
@@ -22,6 +27,7 @@ def serialize_me(user):
     return {
         "id": user.id,
         "username": user.username,
+        "must_change_password": user.must_change_password,
         "memberships": [
             {
                 "society_id": m.society_id,

@@ -88,13 +88,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     # Deny by default: every endpoint must opt in to public access explicitly.
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_PERMISSION_CLASSES": ["apps.accounts.permissions.IsSettledUser"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
     # Throttle scopes used with ScopedRateThrottle. Behind a proxy (Render) the client IP comes
     # from X-Forwarded-For: set NUM_PROXIES at deploy time or all users share one bucket.
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "demo": "30/min"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "demo": "30/min", "password": "10/min"},
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
 }
@@ -117,3 +117,6 @@ CELERY_BEAT_SCHEDULE = {
 # OFF by default. Turn on only for a database that holds fake data.
 DEMO_MODE = env.bool("DEMO_MODE", default=False)
 DEMO_USERS = env.list("DEMO_USERS", default=[])
+
+# Admin-issued logins: how long a temporary password stays valid if never used.
+TEMP_PASSWORD_DAYS = env.int("TEMP_PASSWORD_DAYS", default=7)

@@ -6,4 +6,10 @@ urlpatterns = [
     path("flats/", views.FlatListCreateView.as_view(), name="flat-list"),
     path("flats/<int:pk>/", views.FlatDetailView.as_view(), name="flat-detail"),
     path("members/", views.MembershipListCreateView.as_view(), name="member-list"),
+    path("people/", views.CreateLoginView.as_view(), name="person-create"),
+    path(
+        "members/<int:member_id>/reissue/",
+        views.ReissueCredentialsView.as_view(),
+        name="member-reissue",
+    ),
 ]

@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
 from rest_framework import serializers
 
+from apps.accounts.credentials import login_status
+
 from .models import Flat, Membership
 from .services import add_member
 
@@ -37,13 +39,35 @@ def _api_errors(exc):
     return errors
 
 
+class CreateLoginSerializer(serializers.Serializer):
+    """Input for creating a brand-new login. The society comes from the URL, never the body."""
+
+    name = serializers.CharField(max_length=100)
+    role = serializers.ChoiceField(choices=Membership.Role.choices)
+    flat = serializers.PrimaryKeyRelatedField(
+        queryset=Flat.objects.none(), required=False, allow_null=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        society = self.context.get("society")
+        if society is not None:
+            self.fields["flat"].queryset = Flat.objects.for_society(society)
+
+
 class MembershipSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     user = serializers.CharField(source="user.username", read_only=True)
+    name = serializers.CharField(source="user.first_name", read_only=True)
+    login_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Membership
-        fields = ["id", "username", "user", "role", "flat"]
+        fields = ["id", "username", "user", "name", "login_status", "role", "flat"]
+
+    def get_login_status(self, obj):
+        # 'active', 'temporary' (never used) or 'expired'. Lists select_related("user").
+        return login_status(obj.user)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
