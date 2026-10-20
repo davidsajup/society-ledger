@@ -50,7 +50,7 @@ class Membership(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
     )
     society = models.ForeignKey(Society, on_delete=models.PROTECT, related_name="memberships")
-    role = models.CharField(max_length=10, choices=Role.choices)
+    role = models.CharField(max_length=20, choices=Role.choices)
     flat = models.ForeignKey(
         Flat, null=True, blank=True, on_delete=models.PROTECT, related_name="memberships"
     )
@@ -62,6 +62,11 @@ class Membership(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "society"], name="one_membership_per_user_per_society"
+            ),
+            # `choices` is only checked by Django; this makes Postgres refuse unknown roles too.
+            models.CheckConstraint(
+                condition=Q(role__in=["admin", "treasurer", "resident"]),
+                name="membership_role_valid",
             ),
             # A resident must be attached to a flat; the database refuses it otherwise.
             models.CheckConstraint(
