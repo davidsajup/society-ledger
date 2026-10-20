@@ -259,3 +259,31 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Chose:** The audit log is rendered as sentences grouped by day, with filters; `GET /billing-runs/` lists which months were billed. Admin and treasurer only. The page states that the log cannot be edited or deleted.
 - **Rejected:** A separate "activity" table (the audit log already is one); letting residents see it.
 - **Why:** It surfaces the strongest property of the system (nothing happens without a trace) without new write paths.
+
+## 049 — Admin-issued logins use RANDOM one-time passwords, never anything derived (2026-10-20)
+- **Chose:** The admin creates a login (name, role, flat). The server generates a readable username (`ravi.a-101@sunrise-heights`, unique across societies because it includes the society slug) and a random 12-character password (`xxxx-xxxx-xxxx`, no look-alike characters, about 59 bits). The password is shown to the admin once and stored only as a hash.
+- **Rejected:** A password derived from the flat number (the original proposal).
+- **Why:** Flat numbers are public knowledge inside a society. A derived password means anyone who knows the layout can sign in as any resident until they change it, and can lock the real owner out by changing it first. The username is an identifier, not a secret, so deriving it is fine.
+- **Tested:** the password is not guessable from the name, flat or society; it appears in no audit row, list response or log; the response is `Cache-Control: no-store`.
+
+## 050 — Temporary passwords must be replaced at first login, enforced on the server, and expire (2026-10-20)
+- **Chose:** `must_change_password` and `temp_password_expires_at` on the user (default 7 days, `TEMP_PASSWORD_DAYS`). While the flag is set, the default permission `IsSettledUser` (also used by every society-scoped view) answers 403 `password_change_required` everywhere except `me`, `logout` and `change-password`. After expiry even the correct password is refused (400 `credentials_expired`), without revealing whether a username exists, and the admin can re-issue.
+- **Rejected:** "Change it within a fixed period" with a long-lived temporary password (weeks of exposure); enforcing the change only in the browser.
+- **Why:** A rule that only the UI enforces is a suggestion. Putting it in the shared permission class means no endpoint can forget it, and a test hits every kind of endpoint.
+- **Also:** changing a password keeps the current session and ends all others; it is validated by Django's validators, throttled and CSRF-protected.
+
+## 051 — Re-issuing credentials is deliberately limited (2026-10-20)
+- **Chose:** An admin can re-issue only for someone in THEIR society who belongs to no other society, and never for staff, superusers or themselves. A new temporary password ends the person's existing sessions. The action is audited (username, never the password).
+- **Rejected:** Letting any admin reset any member.
+- **Why:** Accounts are global but societies are tenants. If society A's admin could reset a password for someone who also belongs to society B, that is a cross-tenant account takeover. Tested with a person in two societies, a superuser and a staff user.
+
+## 052 — Credentials are handed over by the admin, not emailed (2026-10-20)
+- **Chose:** The temporary password is shown once in a dialog (Copy button, "shown only once" warning, no click-away dismissal). Printable slips and a one-time CSV come with the CSV import (phase B).
+- **Rejected:** Email delivery (needs an email provider and puts passwords in inboxes); showing it again later (it is stored hashed, so that is impossible by design).
+- **Limit:** If the admin loses it, they issue a new one.
+
+## 053 — A server enum the UI does not know must not blank the page (2026-10-20)
+- **Incident:** Adding two audit event types (login created, credentials re-issued) made the Activity page crash with a blank screen the first time one appeared, because the page looked up an icon for each event type and found none.
+- **Chose:** The TypeScript union now lists every action, so the compiler flags missing cases; the page falls back to a neutral row for any future unknown action; and an `ErrorBoundary` around the page area shows "This page hit a problem" with a Reload button instead of a blank screen.
+- **Why it slipped through:** the page was only checked against the events that existed when it was built, and the frontend has no automated tests.
+- **Follow-up idea:** a backend test that every `AuditLog.Action` value appears in `frontend/src/api/types.ts`.

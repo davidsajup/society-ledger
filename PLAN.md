@@ -2,11 +2,13 @@
 
 **Current task:** M6 — React frontend (first slice built and manually tested; refine the screens next)
 
+**Next (phase B of onboarding):** CSV import of people (preview, then confirm, in one transaction; creates missing flats; one login per person) and a printable credentials-slips page plus a one-time CSV download. Reuses `create_member_login`. CSV only; Excel needs a new library, so ask first.
+
 **Next demo step (M5):** a PUBLIC demo needs its own database that is reseeded regularly, and `DEMO_MODE` set only there.
 
 **On hold:** M5 — GitHub Actions CI + deployment. Resume afterwards: CI workflow, production image, Render + Supabase prod project, and the cross-site cookie decision (040).
 
-**Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction); reports (summary, activity, dues by month, billing runs) and `seed_demo`; frontend: login, resident dashboard, treasurer overview/payments/expenses, admin flats/residents, plus flat statements with running balance, printable receipts (void if reversed), dues-by-month grid, an activity timeline with billing history, and a demo mode (one-click role logins, off by default, with a banner). 414 backend tests.
+**Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction); reports (summary, activity, dues by month, billing runs) and `seed_demo`; frontend: login, resident dashboard, treasurer overview/payments/expenses, admin flats/residents, plus flat statements with running balance, printable receipts (void if reversed), dues-by-month grid, an activity timeline with billing history, a demo mode (one-click role logins, off by default, with a banner), and admin-issued logins (random one-time passwords, forced change at first login, 7-day expiry, re-issue). 479 backend tests.
 
 Budget: ~10 h/week on this project. Job applications start early February 2027 (~15 weekends from 2026-10-20).
 Rule: backend milestones (M1–M5) are protected. If we slip, M6 (frontend) shrinks first.

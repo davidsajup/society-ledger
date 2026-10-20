@@ -33,6 +33,13 @@ These are invariants. Code that breaks one of them is a bug, even if no test cat
 - AuditLog rows, like ledger entries and expenses, can never be updated or deleted (Python guard plus Postgres trigger). The audit log is read-only over HTTP.
 - Expenses: positive `Decimal` amounts, not dated in the future; corrected only by a reversing expense (at most once; a reversal cannot be reversed); a retried request with the same `Idempotency-Key` returns the original.
 
+## Logins
+- A login is created by a society admin, never by self-sign-up. The temporary password is random, shown once, stored only as a hash, and never written to logs, audit rows or list responses.
+- A person on a temporary password can only reach `me`, `logout` and `change-password` until they choose their own password. The server enforces this on every request.
+- An unused temporary password expires (default 7 days); after that even the correct password is refused until an admin re-issues it.
+- Re-issuing is allowed only for a member of the admin's own society who belongs to no other society, and never for staff, superusers or the admin themselves. It ends the person's existing sessions and is audited without the password.
+- Usernames include the society slug, so two societies' flats never collide.
+
 ## Roles (per society, via Membership)
 | Action | Admin | Treasurer | Resident |
 |---|---|---|---|
