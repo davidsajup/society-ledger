@@ -3,8 +3,10 @@ import {
   IconArrowBackUp,
   IconCalendarDollar,
   IconCoin,
+  IconKey,
   IconReceipt2,
   IconShieldLock,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
@@ -14,7 +16,7 @@ import { useMembership } from "../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money, formatDate } from "../components/common";
 import { dayHeading, dayKey, monthLabel, timeLabel } from "../lib/dates";
 
-type Filter = "all" | "payments" | "expenses" | "billing";
+type Filter = "all" | "payments" | "expenses" | "billing" | "people";
 
 const GROUP: Record<AuditRow["action"], Exclude<Filter, "all">> = {
   "payment.recorded": "payments",
@@ -22,6 +24,8 @@ const GROUP: Record<AuditRow["action"], Exclude<Filter, "all">> = {
   "expense.recorded": "expenses",
   "expense.reversed": "expenses",
   "billing.run": "billing",
+  "member.created": "people",
+  "credentials.reissued": "people",
 };
 
 const LOOK: Record<AuditRow["action"], { icon: typeof IconCoin; color: string }> = {
@@ -30,7 +34,18 @@ const LOOK: Record<AuditRow["action"], { icon: typeof IconCoin; color: string }>
   "billing.run": { icon: IconCalendarDollar, color: "violet" },
   "expense.recorded": { icon: IconReceipt2, color: "blue" },
   "expense.reversed": { icon: IconArrowBackUp, color: "orange" },
+  "member.created": { icon: IconUserPlus, color: "indigo" },
+  "credentials.reissued": { icon: IconKey, color: "yellow" },
 };
+
+// ...and anything the server adds in future degrades to a neutral row instead of crashing the
+// whole page (this is what a missing entry used to do).
+const FALLBACK_LOOK = { icon: IconShieldLock, color: "gray" };
+const lookOf = (action: string) =>
+  (LOOK as Record<string, { icon: typeof IconCoin; color: string } | undefined>)[action] ??
+  FALLBACK_LOOK;
+const groupOf = (action: string) =>
+  (GROUP as Record<string, Exclude<Filter, "all"> | undefined>)[action];
 
 function describe(row: AuditRow, flatLabel: (id: number | null) => string): string {
   const who = row.actor === "system" ? "System" : row.actor;
@@ -49,6 +64,14 @@ function describe(row: AuditRow, flatLabel: (id: number | null) => string): stri
       return `${who} recorded an expense · ${String(row.data.category ?? "other")}`;
     case "expense.reversed":
       return `${who} reversed an expense · ${String(row.data.category ?? "other")}`;
+    case "member.created": {
+      const where = row.flat === null ? "" : ` · Flat ${flatLabel(row.flat)}`;
+      return `${who} created a ${String(row.data.role ?? "member")} login · ${String(row.data.username ?? "")}${where}`;
+    }
+    case "credentials.reissued":
+      return `${who} issued a new password · ${String(row.data.username ?? "")}`;
+    default:
+      return `${who} · ${String((row as AuditRow).action)}`;
   }
 }
 
@@ -65,7 +88,7 @@ export function ActivityPage() {
   const groups = useMemo(() => {
     const byDay = new Map<string, AuditRow[]>();
     for (const row of audit.data ?? []) {
-      if (filter !== "all" && GROUP[row.action] !== filter) continue;
+      if (filter !== "all" && groupOf(row.action) !== filter) continue;
       const key = dayKey(row.created_at);
       byDay.set(key, [...(byDay.get(key) ?? []), row]);
     }
@@ -132,6 +155,7 @@ export function ActivityPage() {
             { value: "payments", label: "Payments" },
             { value: "expenses", label: "Expenses" },
             { value: "billing", label: "Billing" },
+            { value: "people", label: "People" },
           ]}
         />
 
@@ -148,7 +172,7 @@ export function ActivityPage() {
                 {dayHeading(rows[0].created_at)}
               </Text>
               {rows.map((row) => {
-                const look = LOOK[row.action];
+                const look = lookOf(row.action);
                 return (
                   <Card key={row.id} padding="sm">
                     <Group justify="space-between" wrap="nowrap" align="center">

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth, RequireRole } from "./auth/session";
 import { AppLayout } from "./layout/AppLayout";
 import { ActivityPage } from "./pages/ActivityPage";
+import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { FlatsPage } from "./pages/admin/FlatsPage";
 import { ResidentsPage } from "./pages/admin/ResidentsPage";
 import { DuesPage } from "./pages/DuesPage";
@@ -22,6 +23,7 @@ export function App() {
 
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomeRedirect />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
 
         {/* The society in the URL mirrors the API (/api/societies/<id>/...). The server still
             checks every request; these guards only keep the UI from showing broken pages. */}

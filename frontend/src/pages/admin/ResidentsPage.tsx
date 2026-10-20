@@ -3,8 +3,11 @@ import {
   Badge,
   Button,
   Card,
+  Code,
+  CopyButton,
   Group,
   Modal,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -13,22 +16,39 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconUserPlus } from "@tabler/icons-react";
+import { IconCheck, IconCopy, IconKey, IconShieldLock, IconUserPlus } from "@tabler/icons-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { formErrors, generalError } from "../../api/client";
-import { useAddMember, useFlats, useMembers } from "../../api/hooks";
-import type { Role } from "../../api/types";
-import { useMembership } from "../../auth/session";
+import {
+  useAddMember,
+  useCreateLogin,
+  useFlats,
+  useMembers,
+  useReissueLogin,
+} from "../../api/hooks";
+import type { IssuedLogin, LoginStatus, Member, Role } from "../../api/types";
+import { useMembership, useSession } from "../../auth/session";
 import { CardSkeleton, EmptyState, ErrorState } from "../../components/common";
+import { ConfirmModal } from "../../components/ConfirmModal";
+import { calendarDay } from "../../lib/dates";
 
 const ROLE_COLOR: Record<Role, string> = { admin: "violet", treasurer: "teal", resident: "sunrise" };
+const STATUS: Record<Exclude<LoginStatus, "active">, { label: string; color: string }> = {
+  temporary: { label: "Not signed in yet", color: "yellow" },
+  expired: { label: "Password expired", color: "red" },
+};
 
 export function ResidentsPage() {
   const societyId = useMembership().society_id;
+  const { me } = useSession();
   const members = useMembers(societyId);
   const flats = useFlats(societyId);
+  const reissue = useReissueLogin(societyId);
   const [adding, setAdding] = useState(false);
+  const [issued, setIssued] = useState<{ login: IssuedLogin; person: string } | null>(null);
+  const [resetting, setResetting] = useState<Member | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const flatLabel = useMemo(
     () => new Map((flats.data ?? []).map((f) => [f.id, f.label])),
@@ -38,6 +58,22 @@ export function ResidentsPage() {
   if (members.isPending || flats.isPending) return <CardSkeleton rows={5} />;
   if (members.isError) return <ErrorState error={members.error} onRetry={() => members.refetch()} />;
   if (flats.isError) return <ErrorState error={flats.error} onRetry={() => flats.refetch()} />;
+
+  function confirmReset() {
+    if (!resetting) return;
+    setResetError(null);
+    reissue.mutate(resetting.id, {
+      onSuccess: (login) => {
+        setIssued({ login, person: resetting.name || resetting.user });
+        setResetting(null);
+      },
+      onError: (error) =>
+        setResetError(
+          Object.values(formErrors(error, "Could not issue a new password."))[0] ??
+            "Could not issue a new password.",
+        ),
+    });
+  }
 
   return (
     <Stack gap="lg">
@@ -52,46 +88,179 @@ export function ResidentsPage() {
         <EmptyState title="No members yet" />
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-          {members.data.map((member) => (
-            <Card key={member.id} padding="md">
-              <Group justify="space-between" wrap="nowrap">
-                <div>
-                  <Text fw={800}>{member.user}</Text>
-                  <Text size="sm" c="dimmed">
-                    {member.flat !== null ? `Flat ${flatLabel.get(member.flat) ?? member.flat}` : "Society-wide role"}
-                  </Text>
-                </div>
-                <Badge variant="light" color={ROLE_COLOR[member.role]} tt="capitalize">
-                  {member.role}
-                </Badge>
-              </Group>
-            </Card>
-          ))}
+          {members.data.map((member) => {
+            const status = member.login_status === "active" ? null : STATUS[member.login_status];
+            const isMe = member.user === me.username;
+            return (
+              <Card key={member.id} padding="md">
+                <Group justify="space-between" wrap="nowrap" align="flex-start">
+                  <div style={{ minWidth: 0 }}>
+                    <Text fw={800} truncate>
+                      {member.name || member.user}
+                    </Text>
+                    <Text size="sm" c="dimmed" truncate>
+                      {member.flat !== null
+                        ? `Flat ${flatLabel.get(member.flat) ?? member.flat}`
+                        : "Society-wide role"}
+                    </Text>
+                    <Text size="xs" c="dimmed" truncate>
+                      {member.user}
+                    </Text>
+                  </div>
+                  <Stack gap={4} align="flex-end">
+                    <Badge variant="light" color={ROLE_COLOR[member.role]} tt="capitalize">
+                      {member.role}
+                    </Badge>
+                    {status && (
+                      <Badge variant="light" color={status.color} size="sm">
+                        {status.label}
+                      </Badge>
+                    )}
+                    {!isMe && (
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        color="gray"
+                        leftSection={<IconKey size={14} />}
+                        onClick={() => {
+                          setResetError(null);
+                          setResetting(member);
+                        }}
+                      >
+                        New password
+                      </Button>
+                    )}
+                  </Stack>
+                </Group>
+              </Card>
+            );
+          })}
         </SimpleGrid>
       )}
 
-      <AddMemberModal
+      <AddPersonModal
         societyId={societyId}
         opened={adding}
         onClose={() => setAdding(false)}
+        onIssued={(login, person) => {
+          setAdding(false);
+          setIssued({ login, person });
+        }}
         flats={(flats.data ?? []).map((f) => ({ value: String(f.id), label: `Flat ${f.label}` }))}
       />
+
+      <ConfirmModal
+        opened={resetting !== null}
+        title="Issue a new password?"
+        confirmLabel="Issue new password"
+        loading={reissue.isPending}
+        error={resetError}
+        onConfirm={confirmReset}
+        onClose={() => setResetting(null)}
+      >
+        {resetting && (
+          <>
+            This replaces {resetting.name || resetting.user}&apos;s password with a new temporary one
+            and signs them out everywhere. They will have to choose their own password again.
+          </>
+        )}
+      </ConfirmModal>
+
+      <CredentialsDialog issued={issued} onDone={() => setIssued(null)} />
     </Stack>
   );
 }
 
-function AddMemberModal({
+/** Shows a temporary password exactly once. The server cannot show it again, and neither can we. */
+function CredentialsDialog({
+  issued,
+  onDone,
+}: {
+  issued: { login: IssuedLogin; person: string } | null;
+  onDone: () => void;
+}) {
+  const login = issued?.login;
+  const expires = login ? calendarDay(login.expires_at) : "";
+  const details = login
+    ? `Username: ${login.username}\nTemporary password: ${login.temp_password}\nValid until ${expires}. You will be asked to choose your own password at first login.`
+    : "";
+
+  return (
+    <Modal
+      opened={issued !== null}
+      onClose={onDone}
+      closeOnClickOutside={false}
+      closeOnEscape={false}
+      withCloseButton={false}
+      title={`Login details for ${issued?.person ?? ""}`}
+      centered
+    >
+      {login && (
+        <Stack gap="md">
+          <Alert color="yellow" icon={<IconShieldLock size={18} />} title="Shown only once">
+            Give these to {issued.person} privately. The password cannot be shown again; if it is
+            lost, issue a new one.
+          </Alert>
+
+          <div>
+            <Text size="sm" c="dimmed">
+              Username
+            </Text>
+            <Code fz="md" block>
+              {login.username}
+            </Code>
+          </div>
+          <div>
+            <Text size="sm" c="dimmed">
+              Temporary password
+            </Text>
+            <Code fz="lg" fw={700} block>
+              {login.temp_password}
+            </Code>
+          </div>
+          <Text size="sm" c="dimmed">
+            Valid until {expires}. They must choose their own password the first time they sign in.
+          </Text>
+
+          <Group justify="space-between">
+            <CopyButton value={details}>
+              {({ copied, copy }) => (
+                <Button
+                  variant="light"
+                  leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                  onClick={copy}
+                >
+                  {copied ? "Copied" : "Copy login details"}
+                </Button>
+              )}
+            </CopyButton>
+            <Button onClick={onDone}>I&apos;ve saved it</Button>
+          </Group>
+        </Stack>
+      )}
+    </Modal>
+  );
+}
+
+type Mode = "create" | "link";
+
+function AddPersonModal({
   societyId,
   opened,
   onClose,
+  onIssued,
   flats,
 }: {
   societyId: number;
   opened: boolean;
   onClose: () => void;
+  onIssued: (login: IssuedLogin, person: string) => void;
   flats: { value: string; label: string }[];
 }) {
-  const add = useAddMember(societyId);
+  const create = useCreateLogin(societyId);
+  const link = useAddMember(societyId);
+  const [mode, setMode] = useState<Mode>("create");
+  const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [role, setRole] = useState<Role>("resident");
   const [flat, setFlat] = useState<string | null>(null);
@@ -99,48 +268,96 @@ function AddMemberModal({
 
   useEffect(() => {
     if (opened) {
+      setMode("create");
+      setName("");
       setUsername("");
       setRole("resident");
       setFlat(null);
       setErrors({});
-      add.reset();
+      create.reset();
+      link.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the modal opens
   }, [opened]);
 
-  const general = generalError(errors, ["username", "role", "flat"]);
   const needsFlat = role === "resident";
-  const canSubmit = username.trim() !== "" && (!needsFlat || flat !== null);
+  const who = mode === "create" ? name.trim() : username.trim();
+  const canSubmit = who !== "" && (!needsFlat || flat !== null);
+  const general = generalError(errors, ["name", "username", "role", "flat"]);
+  const busy = create.isPending || link.isPending;
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
-    add.mutate(
-      { username: username.trim(), role, flat: needsFlat && flat ? Number(flat) : null },
-      {
-        onSuccess: () => {
-          notifications.show({ color: "teal", title: "Added", message: `${username.trim()} is now ${role}` });
-          onClose();
+    setErrors({});
+    const flatId = needsFlat && flat ? Number(flat) : null;
+    if (mode === "create") {
+      create.mutate(
+        { name: name.trim(), role, flat: flatId },
+        {
+          onSuccess: (login) => onIssued(login, name.trim()),
+          onError: (error) => setErrors(formErrors(error, "Could not create the login.")),
         },
-        onError: (error) => setErrors(formErrors(error, "Could not add this person.")),
-      },
-    );
+      );
+    } else {
+      link.mutate(
+        { username: username.trim(), role, flat: flatId },
+        {
+          onSuccess: () => {
+            notifications.show({
+              color: "teal",
+              title: "Added",
+              message: `${username.trim()} is now ${role}`,
+            });
+            onClose();
+          },
+          onError: (error) => setErrors(formErrors(error, "Could not add this person.")),
+        },
+      );
+    }
   }
 
   return (
     <Modal opened={opened} onClose={onClose} title="Add a person to this society" centered>
       <form onSubmit={submit}>
         <Stack>
-          <TextInput
-            label="Username"
-            description="They must already have a login."
-            autoCapitalize="none"
-            value={username}
-            onChange={(e) => setUsername(e.currentTarget.value)}
-            error={errors.username}
-            required
-            data-autofocus
+          <SegmentedControl
+            fullWidth
+            value={mode}
+            onChange={(v) => {
+              setMode(v as Mode);
+              setErrors({});
+            }}
+            data={[
+              { value: "create", label: "Create a login" },
+              { value: "link", label: "Existing login" },
+            ]}
           />
+
+          {mode === "create" ? (
+            <TextInput
+              label="Full name"
+              description="We create their username and a one-time password for you to hand over."
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+              error={errors.name}
+              required
+              data-autofocus
+            />
+          ) : (
+            <TextInput
+              label="Username"
+              description="They must already have a login (for example from another society)."
+              autoCapitalize="none"
+              value={username}
+              onChange={(e) => setUsername(e.currentTarget.value)}
+              error={errors.username}
+              required
+              data-autofocus
+            />
+          )}
+
           <Select
             label="Role"
             data={[
@@ -174,8 +391,8 @@ function AddMemberModal({
             <Button variant="default" onClick={onClose} type="button">
               Cancel
             </Button>
-            <Button type="submit" loading={add.isPending} disabled={!canSubmit}>
-              Add
+            <Button type="submit" loading={busy} disabled={!canSubmit}>
+              {mode === "create" ? "Create login" : "Add"}
             </Button>
           </Group>
         </Stack>

@@ -13,6 +13,7 @@ export interface Membership {
 export interface Me {
   id: number;
   username: string;
+  must_change_password: boolean;
   memberships: Membership[];
 }
 
@@ -89,11 +90,23 @@ export interface Flat {
   monthly_maintenance: string;
 }
 
+export type LoginStatus = "active" | "temporary" | "expired";
+
 export interface Member {
   id: number;
-  user: string;
+  user: string; // username
+  name: string;
+  login_status: LoginStatus;
   role: Role;
   flat: number | null;
+}
+
+/** The ONE response that carries a temporary password. It is never available again. */
+export interface IssuedLogin {
+  username: string;
+  temp_password: string;
+  expires_at: string;
+  member?: Member;
 }
 
 export interface AuditRow {
@@ -103,7 +116,9 @@ export interface AuditRow {
     | "entry.reversed"
     | "billing.run"
     | "expense.recorded"
-    | "expense.reversed";
+    | "expense.reversed"
+    | "member.created"
+    | "credentials.reissued";
   actor: string; // "system" for the billing job
   flat: number | null;
   object_type: string;

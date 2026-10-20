@@ -10,6 +10,7 @@ import type {
   ExpenseList,
   Flat,
   FlatLedger,
+  IssuedLogin,
   LedgerEntry,
   Me,
   Member,
@@ -264,6 +265,38 @@ export function useAddMember(societyId: number) {
   return useMutation({
     mutationFn: (v: { username: string; role: Role; flat: number | null }) =>
       api<Member>(`${base(societyId)}/members/`, { method: "POST", body: v }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.members(societyId) }),
+  });
+}
+
+// --- Accounts and logins ----------------------------------------------------------------
+
+export function useChangePassword() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { current_password: string; new_password: string }) =>
+      api<Me>("/auth/change-password/", { method: "POST", body: v }),
+    onSuccess: (me) => queryClient.setQueryData(keys.me, me),
+  });
+}
+
+export function useCreateLogin(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { name: string; role: Role; flat: number | null }) =>
+      api<IssuedLogin>(`${base(societyId)}/people/`, { method: "POST", body: v }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.members(societyId) }),
+  });
+}
+
+export function useReissueLogin(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: number) =>
+      api<IssuedLogin>(`${base(societyId)}/members/${memberId}/reissue/`, {
+        method: "POST",
+        body: {},
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.members(societyId) }),
   });
 }

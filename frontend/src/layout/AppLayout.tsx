@@ -18,6 +18,7 @@ import {
   IconChartPie,
   IconHistory,
   IconHome,
+  IconKey,
   IconLogout,
   IconMoon,
   IconNotebook,
@@ -27,12 +28,13 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useLogout } from "../api/hooks";
 import type { Role } from "../api/types";
 import { useMembership, useSession } from "../auth/session";
 import { DemoBanner } from "../components/DemoBanner";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 interface NavItem {
   to: string;
@@ -72,6 +74,7 @@ export function AppLayout() {
   const { me } = useSession();
   const membership = useMembership();
   const navigate = useNavigate();
+  const location = useLocation();
   const logout = useLogout();
   const { setColorScheme } = useMantineColorScheme();
   const scheme = useComputedColorScheme("light");
@@ -156,6 +159,12 @@ export function AppLayout() {
                     </Menu.Item>
                   )}
                   <Menu.Item
+                    leftSection={<IconKey size={16} />}
+                    onClick={() => navigate("/change-password")}
+                  >
+                    Change password
+                  </Menu.Item>
+                  <Menu.Item
                     color="red"
                     leftSection={<IconLogout size={16} />}
                     onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/login") })}
@@ -172,7 +181,9 @@ export function AppLayout() {
       <DemoBanner />
 
       <Container size="md" py="lg" className="page">
-        <Outlet />
+        <ErrorBoundary resetKey={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </Container>
 
       {items.length > 1 && (

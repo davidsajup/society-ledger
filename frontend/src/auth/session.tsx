@@ -31,6 +31,10 @@ export function RequireAuth() {
 
   if (isPending) return <PageLoader />;
   if (!me) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // The server refuses every other request anyway; this just sends the person where they can act.
+  if (me.must_change_password && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
   return (
     <SessionContext.Provider value={{ me, membership: null }}>
       <Outlet />
