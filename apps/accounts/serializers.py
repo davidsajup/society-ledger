@@ -3,6 +3,10 @@ from rest_framework import serializers
 from apps.societies.models import Membership
 
 
+class DemoLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(trim_whitespace=False)

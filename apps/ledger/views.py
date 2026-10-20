@@ -88,6 +88,7 @@ class FlatLedgerView(SocietyScopedView, APIView):
         entries = (
             LedgerEntry.objects.for_society(request.society)
             .filter(flat=flat)
+            .select_related("created_by")  # recorded_by, without one query per row
             .order_by("-created_at", "-id")[:LEDGER_PAGE]
         )
         return Response(

@@ -47,6 +47,8 @@ ROUTES = {
     "audit-list": lambda b: {"society_id": b["society"].id},
     "summary": lambda b: {"society_id": b["society"].id},
     "activity": lambda b: {"society_id": b["society"].id},
+    "dues": lambda b: {"society_id": b["society"].id},
+    "billing-runs": lambda b: {"society_id": b["society"].id},
 }
 
 PAYLOAD = {

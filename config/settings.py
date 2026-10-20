@@ -94,7 +94,7 @@ REST_FRAMEWORK = {
     ],
     # Throttle scopes used with ScopedRateThrottle. Behind a proxy (Render) the client IP comes
     # from X-Forwarded-For: set NUM_PROXIES at deploy time or all users share one bucket.
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min"},
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "demo": "30/min"},
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
 }
@@ -112,3 +112,8 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=1, minute=0),  # 01:00 Asia/Kolkata, every day
     },
 }
+
+# --- Demo mode (passwordless logins for fake demo accounts; see apps/accounts/demo.py) ---
+# OFF by default. Turn on only for a database that holds fake data.
+DEMO_MODE = env.bool("DEMO_MODE", default=False)
+DEMO_USERS = env.list("DEMO_USERS", default=[])

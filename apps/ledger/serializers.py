@@ -19,10 +19,16 @@ class ReversalInputSerializer(serializers.Serializer):
 
 
 class LedgerEntrySerializer(serializers.ModelSerializer):
+    recorded_by = serializers.SerializerMethodField()
+
     class Meta:
         model = LedgerEntry
-        fields = ["id", "flat", "kind", "amount", "note", "reverses", "created_at"]
+        fields = ["id", "flat", "kind", "amount", "note", "reverses", "recorded_by", "created_at"]
         read_only_fields = fields
+
+    def get_recorded_by(self, obj):
+        # Null for system entries (the billing job). Lists must select_related("created_by").
+        return obj.created_by.username if obj.created_by else "system"
 
 
 class FlatSummarySerializer(serializers.Serializer):

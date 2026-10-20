@@ -22,3 +22,7 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # Run Celery tasks inline so tests need no Redis, and surface task errors in the test.
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# A developer's .env may enable demo mode; tests must always start with it off.
+DEMO_MODE = False
+DEMO_USERS = []
