@@ -11,7 +11,8 @@ import { CardSkeleton, EmptyState, ErrorState, Money, formatDate } from "../../c
 import { ConfirmModal } from "../../components/ConfirmModal";
 
 export function PaymentsPage() {
-  const societyId = useMembership().society_id;
+  const membership = useMembership();
+  const societyId = membership.society_id;
   const activity = useActivity(societyId);
   const reverse = useReverseEntry(societyId);
   const [target, setTarget] = useState<RecentPayment | null>(null);
@@ -74,7 +75,12 @@ export function PaymentsPage() {
                   td={payment.reversed ? "line-through" : undefined}
                   c={payment.reversed ? "dimmed" : "teal.7"}
                 />
-                {!payment.reversed && !payment.is_reversal && (
+                {!payment.reversed && !payment.is_reversal && payment.flat_id === membership.flat_id && (
+                  <Text size="xs" c="dimmed">
+                    Your flat: another office-bearer reverses this
+                  </Text>
+                )}
+                {!payment.reversed && !payment.is_reversal && payment.flat_id !== membership.flat_id && (
                   <Button
                     size="compact-xs"
                     variant="subtle"

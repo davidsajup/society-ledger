@@ -300,3 +300,18 @@ export function useReissueLogin(societyId: number) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.members(societyId) }),
   });
 }
+
+export function useChangeMember(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // `flat` is only sent when it is meant to change; `null` clears it.
+    mutationFn: (v: { memberId: number; role?: Role; flat?: number | null }) => {
+      const { memberId, ...body } = v;
+      return api<Member>(`${base(societyId)}/members/${memberId}/`, { method: "PATCH", body });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: keys.members(societyId) });
+      void queryClient.invalidateQueries({ queryKey: keys.audit(societyId) });
+    },
+  });
+}

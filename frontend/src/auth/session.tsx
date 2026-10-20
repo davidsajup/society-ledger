@@ -60,6 +60,17 @@ export function RequireRole({ roles }: { roles: Role[] }) {
   );
 }
 
+/**
+ * For pages about the person's OWN flat (home, statement, receipts). Any role qualifies, as
+ * long as they live in a flat: an office-bearer is also a resident who pays dues.
+ */
+export function RequireFlat() {
+  const { membership } = useSession();
+  if (!membership) return <Navigate to="/" replace />;
+  if (membership.flat_id === null) return <Navigate to={homePath(membership)} replace />;
+  return <Outlet />;
+}
+
 /** For pages under RequireRole: the membership is guaranteed non-null there. */
 export function useMembership(): Membership {
   const { membership } = useSession();

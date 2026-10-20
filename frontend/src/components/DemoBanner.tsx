@@ -8,8 +8,10 @@ import { useMembership, useSession } from "../auth/session";
 import { capitalise } from "./DemoPicker";
 
 const TRY: Record<Role, string> = {
-  treasurer: "Record a payment on Overview, then watch Dues and Activity update.",
-  admin: "Open Dues to see who is behind, or edit a flat's monthly amount.",
+  treasurer:
+    "Record a payment for another flat. Your own flat's payments are recorded by someone else, by design.",
+  president: "Open People to create a login or change a role, or record the treasurer's payment.",
+  secretary: "Open People to create a login or change a role, or record the treasurer's payment.",
   resident: "Open Statement and tap a receipt to see it printed.",
 };
 

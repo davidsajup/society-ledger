@@ -16,12 +16,20 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck, IconCopy, IconKey, IconShieldLock, IconUserPlus } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconKey,
+  IconShieldLock,
+  IconUserEdit,
+  IconUserPlus,
+} from "@tabler/icons-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { formErrors, generalError } from "../../api/client";
 import {
   useAddMember,
+  useChangeMember,
   useCreateLogin,
   useFlats,
   useMembers,
@@ -32,12 +40,20 @@ import { useMembership, useSession } from "../../auth/session";
 import { CardSkeleton, EmptyState, ErrorState } from "../../components/common";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { calendarDay } from "../../lib/dates";
+import { ROLE_LABEL, ROLE_OPTIONS } from "../../lib/capabilities";
 
-const ROLE_COLOR: Record<Role, string> = { admin: "violet", treasurer: "teal", resident: "sunrise" };
+const ROLE_COLOR: Record<Role, string> = {
+  president: "violet",
+  secretary: "indigo",
+  treasurer: "teal",
+  resident: "sunrise",
+};
 const STATUS: Record<Exclude<LoginStatus, "active">, { label: string; color: string }> = {
   temporary: { label: "Not signed in yet", color: "yellow" },
   expired: { label: "Password expired", color: "red" },
 };
+
+type FlatOption = { value: string; label: string };
 
 export function ResidentsPage() {
   const societyId = useMembership().society_id;
@@ -46,6 +62,7 @@ export function ResidentsPage() {
   const flats = useFlats(societyId);
   const reissue = useReissueLogin(societyId);
   const [adding, setAdding] = useState(false);
+  const [changing, setChanging] = useState<Member | null>(null);
   const [issued, setIssued] = useState<{ login: IssuedLogin; person: string } | null>(null);
   const [resetting, setResetting] = useState<Member | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -54,6 +71,10 @@ export function ResidentsPage() {
     () => new Map((flats.data ?? []).map((f) => [f.id, f.label])),
     [flats.data],
   );
+  const flatOptions: FlatOption[] = (flats.data ?? []).map((f) => ({
+    value: String(f.id),
+    label: `Flat ${f.label}`,
+  }));
 
   if (members.isPending || flats.isPending) return <CardSkeleton rows={5} />;
   if (members.isError) return <ErrorState error={members.error} onRetry={() => members.refetch()} />;
@@ -78,7 +99,7 @@ export function ResidentsPage() {
   return (
     <Stack gap="lg">
       <Group justify="space-between">
-        <Title order={3}>Residents &amp; roles</Title>
+        <Title order={3}>People &amp; roles</Title>
         <Button leftSection={<IconUserPlus size={18} />} onClick={() => setAdding(true)}>
           Add person
         </Button>
@@ -97,38 +118,56 @@ export function ResidentsPage() {
                   <div style={{ minWidth: 0 }}>
                     <Text fw={800} truncate>
                       {member.name || member.user}
+                      {isMe && (
+                        <Text span c="dimmed" fw={500}>
+                          {" "}
+                          (you)
+                        </Text>
+                      )}
                     </Text>
                     <Text size="sm" c="dimmed" truncate>
                       {member.flat !== null
                         ? `Flat ${flatLabel.get(member.flat) ?? member.flat}`
-                        : "Society-wide role"}
+                        : "No flat"}
                     </Text>
                     <Text size="xs" c="dimmed" truncate>
                       {member.user}
                     </Text>
                   </div>
                   <Stack gap={4} align="flex-end">
-                    <Badge variant="light" color={ROLE_COLOR[member.role]} tt="capitalize">
-                      {member.role}
+                    <Badge variant="light" color={ROLE_COLOR[member.role]}>
+                      {ROLE_LABEL[member.role]}
                     </Badge>
                     {status && (
                       <Badge variant="light" color={status.color} size="sm">
                         {status.label}
                       </Badge>
                     )}
+                    {/* Nobody changes their own role or flat; another office-bearer does it. */}
                     {!isMe && (
-                      <Button
-                        size="compact-xs"
-                        variant="subtle"
-                        color="gray"
-                        leftSection={<IconKey size={14} />}
-                        onClick={() => {
-                          setResetError(null);
-                          setResetting(member);
-                        }}
-                      >
-                        New password
-                      </Button>
+                      <Group gap={4} wrap="nowrap">
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          color="gray"
+                          leftSection={<IconUserEdit size={14} />}
+                          onClick={() => setChanging(member)}
+                        >
+                          Change
+                        </Button>
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          color="gray"
+                          leftSection={<IconKey size={14} />}
+                          onClick={() => {
+                            setResetError(null);
+                            setResetting(member);
+                          }}
+                        >
+                          New password
+                        </Button>
+                      </Group>
                     )}
                   </Stack>
                 </Group>
@@ -146,7 +185,14 @@ export function ResidentsPage() {
           setAdding(false);
           setIssued({ login, person });
         }}
-        flats={(flats.data ?? []).map((f) => ({ value: String(f.id), label: `Flat ${f.label}` }))}
+        flats={flatOptions}
+      />
+
+      <ChangeMemberModal
+        societyId={societyId}
+        member={changing}
+        flats={flatOptions}
+        onClose={() => setChanging(null)}
       />
 
       <ConfirmModal
@@ -244,6 +290,53 @@ function CredentialsDialog({
 
 type Mode = "create" | "link";
 
+/** Role + flat inputs shared by "add" and "change": the flat is required only for residents. */
+function RoleAndFlat({
+  role,
+  setRole,
+  flat,
+  setFlat,
+  flats,
+  errors,
+}: {
+  role: Role;
+  setRole: (role: Role) => void;
+  flat: string | null;
+  setFlat: (flat: string | null) => void;
+  flats: FlatOption[];
+  errors: Record<string, string>;
+}) {
+  const required = role === "resident";
+  return (
+    <>
+      <Select
+        label="Role"
+        data={ROLE_OPTIONS}
+        value={role}
+        onChange={(v) => v && setRole(v as Role)}
+        allowDeselect={false}
+        error={errors.role}
+      />
+      <Select
+        label="Flat they live in"
+        description={
+          required
+            ? undefined
+            : "Optional. Office-bearers are residents too and pay their own dues."
+        }
+        placeholder="Choose a flat"
+        data={flats}
+        value={flat}
+        onChange={setFlat}
+        searchable
+        clearable={!required}
+        error={errors.flat}
+        required={required}
+      />
+    </>
+  );
+}
+
 function AddPersonModal({
   societyId,
   opened,
@@ -255,7 +348,7 @@ function AddPersonModal({
   opened: boolean;
   onClose: () => void;
   onIssued: (login: IssuedLogin, person: string) => void;
-  flats: { value: string; label: string }[];
+  flats: FlatOption[];
 }) {
   const create = useCreateLogin(societyId);
   const link = useAddMember(societyId);
@@ -280,9 +373,8 @@ function AddPersonModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the modal opens
   }, [opened]);
 
-  const needsFlat = role === "resident";
   const who = mode === "create" ? name.trim() : username.trim();
-  const canSubmit = who !== "" && (!needsFlat || flat !== null);
+  const canSubmit = who !== "" && (role !== "resident" || flat !== null);
   const general = generalError(errors, ["name", "username", "role", "flat"]);
   const busy = create.isPending || link.isPending;
 
@@ -290,7 +382,7 @@ function AddPersonModal({
     event.preventDefault();
     if (!canSubmit) return;
     setErrors({});
-    const flatId = needsFlat && flat ? Number(flat) : null;
+    const flatId = flat ? Number(flat) : null;
     if (mode === "create") {
       create.mutate(
         { name: name.trim(), role, flat: flatId },
@@ -307,7 +399,7 @@ function AddPersonModal({
             notifications.show({
               color: "teal",
               title: "Added",
-              message: `${username.trim()} is now ${role}`,
+              message: `${username.trim()} is now ${ROLE_LABEL[role].toLowerCase()}`,
             });
             onClose();
           },
@@ -358,30 +450,14 @@ function AddPersonModal({
             />
           )}
 
-          <Select
-            label="Role"
-            data={[
-              { value: "resident", label: "Resident" },
-              { value: "treasurer", label: "Treasurer" },
-              { value: "admin", label: "Admin" },
-            ]}
-            value={role}
-            onChange={(v) => v && setRole(v as Role)}
-            allowDeselect={false}
-            error={errors.role}
+          <RoleAndFlat
+            role={role}
+            setRole={setRole}
+            flat={flat}
+            setFlat={setFlat}
+            flats={flats}
+            errors={errors}
           />
-          {needsFlat && (
-            <Select
-              label="Flat"
-              placeholder="Choose a flat"
-              data={flats}
-              value={flat}
-              onChange={setFlat}
-              searchable
-              error={errors.flat}
-              required
-            />
-          )}
           {general && (
             <Alert color="red" role="alert">
               {general}
@@ -393,6 +469,101 @@ function AddPersonModal({
             </Button>
             <Button type="submit" loading={busy} disabled={!canSubmit}>
               {mode === "create" ? "Create login" : "Add"}
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  );
+}
+
+/** Change someone's role and/or flat. Only what actually changed is sent. */
+function ChangeMemberModal({
+  societyId,
+  member,
+  flats,
+  onClose,
+}: {
+  societyId: number;
+  member: Member | null;
+  flats: FlatOption[];
+  onClose: () => void;
+}) {
+  const change = useChangeMember(societyId);
+  const [role, setRole] = useState<Role>("resident");
+  const [flat, setFlat] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (member) {
+      setRole(member.role);
+      setFlat(member.flat === null ? null : String(member.flat));
+      setErrors({});
+      change.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when a member is chosen
+  }, [member?.id]);
+
+  if (!member) return <Modal opened={false} onClose={onClose} />;
+
+  const originalFlat = member.flat === null ? null : String(member.flat);
+  const changed = role !== member.role || flat !== originalFlat;
+  const general = generalError(errors, ["role", "flat"]);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!member || !changed) return;
+    setErrors({});
+    change.mutate(
+      {
+        memberId: member.id,
+        ...(role !== member.role ? { role } : {}),
+        ...(flat !== originalFlat ? { flat: flat === null ? null : Number(flat) } : {}),
+      },
+      {
+        onSuccess: () => {
+          notifications.show({
+            color: "teal",
+            title: "Updated",
+            message: `${member.name || member.user} is now ${ROLE_LABEL[role].toLowerCase()}`,
+          });
+          onClose();
+        },
+        onError: (error) => setErrors(formErrors(error, "Could not change this person.")),
+      },
+    );
+  }
+
+  return (
+    <Modal opened onClose={onClose} title={`Change ${member.name || member.user}`} centered>
+      <form onSubmit={submit}>
+        <Stack>
+          <RoleAndFlat
+            role={role}
+            setRole={setRole}
+            flat={flat}
+            setFlat={setFlat}
+            flats={flats}
+            errors={errors}
+          />
+          <Text size="xs" c="dimmed">
+            Takes effect immediately. The change is recorded in the activity log.
+          </Text>
+          {general && (
+            <Alert color="red" role="alert">
+              {general}
+            </Alert>
+          )}
+          <Group justify="flex-end">
+            <Button variant="default" onClick={onClose} type="button">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={change.isPending}
+              disabled={!changed || (role === "resident" && flat === null)}
+            >
+              Save
             </Button>
           </Group>
         </Stack>

@@ -49,7 +49,9 @@ export function ResidentDashboard() {
         </div>
         <Text size="sm" c="dimmed" mt={6}>
           {owes
-            ? "Pay your society treasurer, who will record it here."
+            ? membership.role === "resident"
+              ? "Pay your society treasurer, who will record it here."
+              : "Ask another office-bearer to record your payment."
             : "Nothing is due. Thank you!"}
         </Text>
       </Card>

@@ -1,6 +1,6 @@
 // Shapes of the Django API. Every `string` that holds money is a decimal string ("1500.50").
 
-export type Role = "admin" | "treasurer" | "resident";
+export type Role = "president" | "secretary" | "treasurer" | "resident";
 
 export interface Membership {
   society_id: number;
@@ -118,7 +118,8 @@ export interface AuditRow {
     | "expense.recorded"
     | "expense.reversed"
     | "member.created"
-    | "credentials.reissued";
+    | "credentials.reissued"
+    | "member.updated";
   actor: string; // "system" for the billing job
   flat: number | null;
   object_type: string;

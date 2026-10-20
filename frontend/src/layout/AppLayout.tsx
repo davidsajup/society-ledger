@@ -42,8 +42,9 @@ interface NavItem {
   icon: ComponentType<{ size?: number; stroke?: number }>;
 }
 
-// At most 5 items so the phone's bottom bar stays usable. The admin reaches Expenses from the
-// "Spent" card on Overview rather than from the bar.
+// At most 5 items so the phone's bottom bar stays usable. Expenses (for the president and
+// secretary) is reached from the "Spent" card on Overview. Anyone who lives in a flat also has
+// "My flat" in the account menu.
 function navFor(role: Role): NavItem[] {
   switch (role) {
     case "resident":
@@ -59,12 +60,13 @@ function navFor(role: Role): NavItem[] {
         { to: "expenses", label: "Expenses", icon: IconReceipt2 },
         { to: "activity", label: "Activity", icon: IconHistory },
       ];
-    case "admin":
+    case "president":
+    case "secretary":
       return [
         { to: "overview", label: "Overview", icon: IconChartPie },
         { to: "dues", label: "Dues", icon: IconCalendarDollar },
-        { to: "flats", label: "Flats", icon: IconBuildingEstate },
-        { to: "residents", label: "Residents", icon: IconUsers },
+        { to: "payments", label: "Payments", icon: IconCash },
+        { to: "people", label: "People", icon: IconUsers },
         { to: "activity", label: "Activity", icon: IconHistory },
       ];
   }
@@ -156,6 +158,14 @@ export function AppLayout() {
                       onClick={() => navigate("/")}
                     >
                       Switch society
+                    </Menu.Item>
+                  )}
+                  {membership.flat_id !== null && membership.role !== "resident" && (
+                    <Menu.Item
+                      leftSection={<IconHome size={16} />}
+                      onClick={() => navigate(`${prefix}/home`)}
+                    >
+                      My flat
                     </Menu.Item>
                   )}
                   <Menu.Item

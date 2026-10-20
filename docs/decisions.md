@@ -287,3 +287,30 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Chose:** The TypeScript union now lists every action, so the compiler flags missing cases; the page falls back to a neutral row for any future unknown action; and an `ErrorBoundary` around the page area shows "This page hit a problem" with a Reload button instead of a blank screen.
 - **Why it slipped through:** the page was only checked against the events that existed when it was built, and the frontend has no automated tests.
 - **Follow-up idea:** a backend test that every `AuditLog.Action` value appears in `frontend/src/api/types.ts`.
+
+## 054 — Roles are president, secretary, treasurer, resident; `admin` is gone (2026-10-20)
+- **Chose:** The old `admin` became `secretary` through a reversible data migration (`societies/0004`: drop the CHECK, convert rows, re-add the CHECK). President and secretary hold the same powers today; the capability table in `roles.py` is where they can diverge. Only the treasurer records expenses.
+- **Rejected:** Keeping `admin` next to the new roles (nobody in a real society holds that title); a president who can only read (the society wanted a backup person to collect payments).
+- **Why:** The roles should match how the society actually works. Moving rows inside a migration, with the constraint dropped first, keeps the database valid at every step.
+
+## 055 — Office-bearers can have a flat (2026-10-20)
+- **Chose:** A flat is required for a resident and optional for every other role. The existing CHECK (`resident_requires_flat`) already allowed this, so no schema change was needed beyond the role list.
+- **Rejected:** Giving an office-bearer two memberships (one per hat): it doubles the rows and lets the same person hold two roles.
+- **Why:** The president, secretary and treasurer are also residents who pay dues. One role per person, plus a flat, models that without special cases.
+
+## 056 — Nobody records or reverses a payment for their own flat (2026-10-20)
+- **Chose:** `refuse_own_flat` in the ledger service rejects any actor who has a membership on the target flat (so housemates are covered too). It runs before the row lock, returns 403 and writes nothing. The UI hides the buttons, but the server is the real control.
+- **Rejected:** A UI-only rule; comparing only the actor's own flat id (misses a second login in the same flat).
+- **Why:** This is segregation of duties. A treasurer who could mark their own dues paid is the exact fraud an accounting system exists to prevent. Interview framing: "the person with write access to the ledger must not be able to clear their own debt."
+- **Tested:** `test_self_dealing.py`, including mutation checks (remove the guard, tests fail).
+
+## 057 — Changing a role has guard rails (2026-10-20)
+- **Chose:** `PATCH members/<id>/`. Not on yourself; resident needs a flat; the flat must be in this society; the society must keep at least one manager. The managers are locked `ORDER BY pk` before the check, and the target is re-read with `FOR UPDATE OF self`. Audited as `member.updated` with before and after values.
+- **Rejected:** Allowing self-demotion (a lone manager could lock the society out); checking the manager count without locks (two managers demoting each other at once would both pass); an unordered lock (two requests could deadlock).
+- **Why:** This is a check-then-act race, the same family as double-crediting. The lock turns the check into a guarantee.
+
+## 058 — Where office-bearers see their own dues (2026-10-20)
+- **Chose:** A "Your dues" card on Overview and "My flat" in the account menu. Flats and Residents merged into one People tab so the phone bottom bar stays at five items. Routes are guarded by capability or "has a flat", not by role name.
+- **Rejected:** A role switcher; a sixth bottom-bar item.
+- **Why:** Seeing your own dues is a resident capability, not a resident role. Deciding by capability stops the UI from assuming "only residents have flats".
+

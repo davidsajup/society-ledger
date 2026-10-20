@@ -7,6 +7,7 @@ import { ApiError } from "../../api/client";
 import { useExpenses, useReverseExpense } from "../../api/hooks";
 import type { Expense } from "../../api/types";
 import { useMembership } from "../../auth/session";
+import { can } from "../../lib/capabilities";
 import { CardSkeleton, EmptyState, ErrorState, Money, StatCard } from "../../components/common";
 import { CATEGORIES, ExpenseModal } from "../../components/ExpenseModal";
 import { ConfirmModal } from "../../components/ConfirmModal";
@@ -20,7 +21,7 @@ const formatDay = (iso: string) => dayFormat.format(new Date(`${iso}T00:00:00`))
 export function ExpensesPage() {
   const membership = useMembership();
   const societyId = membership.society_id;
-  const canWrite = membership.role === "treasurer";
+  const canWrite = can(membership.role, "recordExpense");
   const expenses = useExpenses(societyId);
   const reverse = useReverseExpense(societyId);
   const [adding, setAdding] = useState(false);

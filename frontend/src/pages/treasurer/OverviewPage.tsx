@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 
 import { useSummary } from "../../api/hooks";
 import { useMembership } from "../../auth/session";
+import { can } from "../../lib/capabilities";
 import { CardSkeleton, EmptyState, ErrorState, Money, StatCard } from "../../components/common";
 import { RecordPaymentModal, type PayableFlat } from "../../components/RecordPaymentModal";
 import { compareMoney, percent, toCents } from "../../lib/money";
@@ -12,7 +13,8 @@ import { compareMoney, percent, toCents } from "../../lib/money";
 export function OverviewPage() {
   const membership = useMembership();
   const societyId = membership.society_id;
-  const canRecord = membership.role === "treasurer";
+  const canRecord = can(membership.role, "recordPayment");
+  const ownFlatId = membership.flat_id;
   const summary = useSummary(societyId);
   const [paying, setPaying] = useState<PayableFlat | null>(null);
 
@@ -30,8 +32,39 @@ export function OverviewPage() {
   const { totals } = summary.data;
   const collectedPct = percent(totals.collected, totals.billed);
 
+  const ownFlat = ownFlatId === null ? null : summary.data.flats.find((f) => f.id === ownFlatId);
+
   return (
     <Stack gap="lg">
+      {ownFlat && (
+        <Card
+          component={Link}
+          to={`/s/${societyId}/home`}
+          bg={
+            toCents(ownFlat.outstanding) > 0n
+              ? "var(--mantine-color-sunrise-light)"
+              : "var(--mantine-color-teal-light)"
+          }
+          style={{ border: "none", textDecoration: "none", color: "inherit" }}
+        >
+          <Group justify="space-between" wrap="nowrap">
+            <div>
+              <Text size="sm" fw={700}>
+                Your dues · Flat {ownFlat.label}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {toCents(ownFlat.outstanding) > 0n
+                  ? "Another office-bearer records your payment."
+                  : "You're all paid up."}
+              </Text>
+            </div>
+            <Text className="money" fz={26} fw={800}>
+              <Money value={ownFlat.outstanding} inherit />
+            </Text>
+          </Group>
+        </Card>
+      )}
+
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
         <StatCard label="Billed" value={totals.billed} />
         <StatCard label="Collected" value={totals.collected} color="teal.7" />
@@ -84,6 +117,11 @@ export function OverviewPage() {
                     <div>
                       <Group gap="xs">
                         <Text fw={800}>Flat {flat.label}</Text>
+                        {flat.id === ownFlatId && (
+                          <Badge variant="outline" size="sm">
+                            Yours
+                          </Badge>
+                        )}
                         <Badge variant="light" color={owes ? "sunrise" : "teal"} size="sm">
                           {owes ? "Due" : "Paid up"}
                         </Badge>
@@ -102,7 +140,7 @@ export function OverviewPage() {
                       </Text>
                     </div>
                     <Stack gap={2} align="flex-end">
-                      {canRecord && owes && (
+                      {canRecord && owes && flat.id !== ownFlatId && (
                         <Button
                           size="compact-md"
                           variant="light"

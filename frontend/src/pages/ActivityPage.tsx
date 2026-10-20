@@ -6,6 +6,7 @@ import {
   IconKey,
   IconReceipt2,
   IconShieldLock,
+  IconUserEdit,
   IconUserPlus,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -26,6 +27,7 @@ const GROUP: Record<AuditRow["action"], Exclude<Filter, "all">> = {
   "billing.run": "billing",
   "member.created": "people",
   "credentials.reissued": "people",
+  "member.updated": "people",
 };
 
 const LOOK: Record<AuditRow["action"], { icon: typeof IconCoin; color: string }> = {
@@ -36,6 +38,7 @@ const LOOK: Record<AuditRow["action"], { icon: typeof IconCoin; color: string }>
   "expense.reversed": { icon: IconArrowBackUp, color: "orange" },
   "member.created": { icon: IconUserPlus, color: "indigo" },
   "credentials.reissued": { icon: IconKey, color: "yellow" },
+  "member.updated": { icon: IconUserEdit, color: "indigo" },
 };
 
 // ...and anything the server adds in future degrades to a neutral row instead of crashing the
@@ -67,6 +70,15 @@ function describe(row: AuditRow, flatLabel: (id: number | null) => string): stri
     case "member.created": {
       const where = row.flat === null ? "" : ` · Flat ${flatLabel(row.flat)}`;
       return `${who} created a ${String(row.data.role ?? "member")} login · ${String(row.data.username ?? "")}${where}`;
+    }
+    case "member.updated": {
+      const d = row.data;
+      const role = d.from_role !== d.to_role ? ` ${String(d.from_role)} → ${String(d.to_role)}` : "";
+      const flat =
+        d.from_flat !== d.to_flat
+          ? ` · flat ${String(d.from_flat ?? "none")} → ${String(d.to_flat ?? "none")}`
+          : "";
+      return `${who} changed ${String(d.username ?? "")}:${role}${flat}`;
     }
     case "credentials.reissued":
       return `${who} issued a new password · ${String(row.data.username ?? "")}`;

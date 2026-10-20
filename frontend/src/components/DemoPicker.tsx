@@ -1,10 +1,11 @@
 import { Alert, Button, Card, Divider, Stack, Text, ThemeIcon } from "@mantine/core";
 import {
   IconBuildingEstate,
+  IconClipboardList,
   IconCoin,
+  IconCrown,
   IconHome,
   IconPlayerPlay,
-  IconShieldCheck,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,19 +15,24 @@ import type { DemoAccount, Role } from "../api/types";
 export const capitalise = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
 const ROLE: Record<Role, { label: string; icon: typeof IconCoin; color: string }> = {
+  president: { label: "President", icon: IconCrown, color: "violet" },
+  secretary: { label: "Secretary", icon: IconClipboardList, color: "indigo" },
   treasurer: { label: "Treasurer", icon: IconCoin, color: "teal" },
-  admin: { label: "Admin", icon: IconShieldCheck, color: "violet" },
   resident: { label: "Resident", icon: IconHome, color: "sunrise" },
 };
 
 function blurb(account: DemoAccount): string {
+  // Office-bearers are also residents who pay their own dues, so they have a flat too.
+  const flat = account.flat_label ? `Flat ${account.flat_label} · ` : "";
   switch (account.role) {
+    case "president":
+      return `${flat}oversees the books and manages people`;
+    case "secretary":
+      return `${flat}manages flats, people and logins`;
     case "treasurer":
-      return "Record payments and expenses, see who owes what";
-    case "admin":
-      return "Set up flats and residents, review the books";
+      return `${flat}records payments and expenses`;
     case "resident":
-      return `Flat ${account.flat_label ?? ""} · your dues, statement and receipts`;
+      return `${flat}your dues, statement and receipts`;
   }
 }
 
