@@ -8,11 +8,22 @@ The attacker is deliberately an ADMIN, so a 404 can only come from tenant isolat
 from a lack of role privileges.
 """
 
+from datetime import date
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APIClient
 
+from apps.audit import urls as audit_urls
+from apps.audit.models import AuditLog
+from apps.expenses import urls as expenses_urls
+from apps.expenses.models import Expense
+from apps.expenses.services import record_expense
+from apps.ledger import urls as ledger_urls
+from apps.ledger.models import LedgerEntry
+from apps.ledger.services import record_charge
 from apps.societies import urls as societies_urls
 from apps.societies.models import Flat, Membership, Society
 from apps.societies.services import add_member
@@ -22,14 +33,29 @@ pytestmark = pytest.mark.django_db
 METHODS = ["get", "post", "put", "patch", "delete"]
 
 # Every route under /api/societies/<society_id>/. The guard test below fails if a route is
-# added to societies/urls.py without being listed here.
+# added to societies/urls.py or ledger/urls.py without being listed here.
 ROUTES = {
     "flat-list": lambda b: {"society_id": b["society"].id},
     "flat-detail": lambda b: {"society_id": b["society"].id, "pk": b["flat"].id},
     "member-list": lambda b: {"society_id": b["society"].id},
+    "payment-create": lambda b: {"society_id": b["society"].id, "flat_id": b["flat"].id},
+    "flat-ledger": lambda b: {"society_id": b["society"].id, "flat_id": b["flat"].id},
+    "entry-reverse": lambda b: {"society_id": b["society"].id, "entry_id": b["entry"].id},
+    "expense-list": lambda b: {"society_id": b["society"].id},
+    "expense-reverse": lambda b: {"society_id": b["society"].id, "expense_id": b["expense"].id},
+    "audit-list": lambda b: {"society_id": b["society"].id},
 }
 
-PAYLOAD = {"label": "HACKED", "username": "attacker-target", "role": "admin"}
+PAYLOAD = {
+    "label": "HACKED",
+    "username": "attacker-target",
+    "role": "admin",
+    "amount": "10.00",
+    "note": "HACKED",
+    "category": "other",
+    "description": "HACKED",
+    "paid_on": "2026-10-01",
+}
 
 
 def make_user(name):
@@ -51,6 +77,19 @@ def snapshot(society):
             .order_by("id")
             .values("id", "user_id", "role", "flat_id")
         ),
+        "ledger": list(
+            LedgerEntry.objects.for_society(society)
+            .order_by("id")
+            .values("id", "flat_id", "kind", "amount", "reverses_id")
+        ),
+        "expenses": list(
+            Expense.objects.for_society(society)
+            .order_by("id")
+            .values("id", "amount", "description", "reverses_id")
+        ),
+        "audit": list(
+            AuditLog.objects.for_society(society).order_by("id").values("id", "action", "object_id")
+        ),
     }
 
 
@@ -62,15 +101,26 @@ def tenant_b():
     add_member(society=society, user=admin, role="admin")
     resident = make_user("b_resident")
     add_member(society=society, user=resident, role="resident", flat=flat)
-    return {"society": society, "flat": flat, "admin": admin, "resident": resident}
+    entry = record_charge(society=society, flat=flat, amount=Decimal("100.00"))
+    expense, _ = record_expense(
+        society=society, actor=admin, category="repairs", description="Lift motor",
+        amount=Decimal("500.00"), paid_on=date(2026, 10, 1),
+    )
+    return {
+        "society": society, "flat": flat, "entry": entry, "expense": expense,
+        "admin": admin, "resident": resident,
+    }
 
 
-@pytest.fixture
-def attacker():
-    """Admin of society A: full power in their own tenant, no membership in B."""
+@pytest.fixture(params=["admin", "treasurer"])
+def attacker(request):
+    """The strongest roles of society A: full power in their own tenant, no membership in B.
+
+    Admin covers the member/flat routes; treasurer covers the money routes.
+    """
     society = Society.objects.create(name="Green Park", slug="green-park")
-    user = make_user("a_admin")
-    add_member(society=society, user=user, role="admin")
+    user = make_user("a_attacker")
+    add_member(society=society, user=user, role=request.param)
     make_user("attacker-target")  # a real user, so a leaked write could actually succeed
     return {"society": society, "client": client_for(user)}
 
@@ -146,7 +196,8 @@ def test_leaked_response_bodies_never_mention_other_tenants_data(attacker, tenan
 
 
 def test_every_societies_route_is_covered_by_this_suite():
-    declared = {p.name for p in societies_urls.urlpatterns}
+    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls)
+    declared = {p.name for module in modules for p in module.urlpatterns}
     assert declared == set(ROUTES), (
         f"Routes without cross-tenant tests: {declared - set(ROUTES)}; "
         f"stale entries: {set(ROUTES) - declared}"

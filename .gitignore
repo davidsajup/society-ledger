@@ -13,3 +13,4 @@ htmlcov/
 .vscode/
 node_modules/
 .claude/settings.local.json
+celerybeat-schedule*

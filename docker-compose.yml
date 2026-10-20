@@ -7,6 +7,12 @@ services:
     volumes:
       - .:/app  # live code reload in dev
 
+  # Celery broker for the monthly billing job (dev only; tests run tasks eagerly).
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
   # Local Postgres used ONLY by pytest. Dev data lives on Supabase.
   db-test:
     image: postgres:16

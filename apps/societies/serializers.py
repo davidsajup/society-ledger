@@ -11,7 +11,9 @@ class FlatSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Flat
-        fields = ["id", "label"]
+        fields = ["id", "label", "monthly_maintenance"]
+        # Mirrors the DB check (>= 0). DRF's DecimalField also refuses more than 2 decimals.
+        extra_kwargs = {"monthly_maintenance": {"min_value": 0}}
 
     def validate_label(self, value):
         society = self.context["society"]

@@ -22,6 +22,8 @@ class Society(models.Model):
 class Flat(models.Model):
     society = models.ForeignKey(Society, on_delete=models.PROTECT, related_name="flats")
     label = models.CharField(max_length=20)  # e.g. "A-101"
+    # What the monthly billing job charges this flat. 0 means "not billed".
+    monthly_maintenance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = TenantQuerySet.as_manager()
@@ -31,6 +33,9 @@ class Flat(models.Model):
             # Two societies may both have "A-101"; one society may not have it twice.
             models.UniqueConstraint(
                 fields=["society", "label"], name="flat_label_unique_per_society"
+            ),
+            models.CheckConstraint(
+                condition=Q(monthly_maintenance__gte=0), name="flat_maintenance_not_negative"
             ),
         ]
 

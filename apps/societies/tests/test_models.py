@@ -83,8 +83,8 @@ def test_add_member_creates_resident_with_own_flat(society_a, user):
 
 def test_every_model_with_a_society_fk_has_for_society():
     missing = []
-    for model in apps.get_app_config("societies").get_models():
-        if model is Society:
+    for model in apps.get_models():
+        if model is Society or not model.__module__.startswith("apps."):
             continue
         has_society_fk = any(f.name == "society" for f in model._meta.get_fields())
         if has_society_fk and not hasattr(model.objects, "for_society"):

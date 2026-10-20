@@ -1,6 +1,8 @@
 # Plan
 
-**Current task:** M0 — Bootstrap (in progress)
+**Current task:** M5 — GitHub Actions CI + deployment (next: design the CI workflow, the production Docker image, and the Render + Supabase prod setup)
+
+**Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction). 301 tests.
 
 Budget: ~10 h/week on this project. Job applications start early February 2027 (~15 weekends from 2026-10-20).
 Rule: backend milestones (M1–M5) are protected. If we slip, M6 (frontend) shrinks first.
@@ -22,4 +24,4 @@ Rule: backend milestones (M1–M5) are protected. If we slip, M6 (frontend) shri
 - [x] Django + DRF skeleton, settings from env
 - [x] Docker Compose: `web` + `db-test`
 - [x] Health endpoint + test
-- [ ] You: create Supabase project, put session-pooler URL in `.env`, run migrate, hit `/api/health/`
+- [x] You: create Supabase project, put session-pooler URL in `.env`, run migrate, hit `/api/health/`

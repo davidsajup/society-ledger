@@ -18,3 +18,7 @@ DATABASES = {
 
 # Fast hashing keeps user-creating tests quick.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# Run Celery tasks inline so tests need no Redis, and surface task errors in the test.
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

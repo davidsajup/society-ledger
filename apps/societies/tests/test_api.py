@@ -200,3 +200,34 @@ def test_member_list_runs_a_constant_number_of_queries(admin, green_park):
         add_member(society=green_park, user=make_user(f"n{i}"), role="resident", flat=flat)
 
     assert count_queries() == baseline
+
+
+# --- Monthly maintenance amount (used by the billing job) -----------------------------------
+
+
+def test_admin_sets_monthly_maintenance_and_it_is_an_exact_string(admin, green_park):
+    flat = Flat.objects.create(society=green_park, label="A-1")
+
+    response = admin.patch(flat_url(green_park, flat), {"monthly_maintenance": "1500.50"})
+
+    assert response.status_code == 200
+    assert response.json()["monthly_maintenance"] == "1500.50"
+    flat.refresh_from_db()
+    assert str(flat.monthly_maintenance) == "1500.50"
+
+
+@pytest.mark.parametrize("bad", ["-1", "10.001", "abc"])
+def test_bad_monthly_maintenance_is_400(admin, green_park, bad):
+    flat = Flat.objects.create(society=green_park, label="A-1")
+
+    response = admin.patch(flat_url(green_park, flat), {"monthly_maintenance": bad})
+
+    assert response.status_code == 400
+
+
+def test_treasurer_cannot_change_monthly_maintenance(treasurer, green_park):
+    flat = Flat.objects.create(society=green_park, label="A-1")
+
+    response = treasurer.patch(flat_url(green_park, flat), {"monthly_maintenance": "9.00"})
+
+    assert response.status_code == 403

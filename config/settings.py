@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,6 +26,10 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.accounts",
     "apps.societies",
+    "apps.ledger",
+    "apps.billing",
+    "apps.audit",
+    "apps.expenses",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -91,4 +96,18 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"login": "10/min"},
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
+}
+
+# --- Celery (broker: Redis) ---------------------------------------------------------------
+CELERY_BROKER_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_TIMEZONE = TIME_ZONE
+# Acknowledge a task only AFTER it finishes, so a worker that dies mid-task gets it redelivered.
+# That is only safe because every task here is idempotent (see apps/billing/services.py).
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_BEAT_SCHEDULE = {
+    "bill-all-societies-daily": {
+        "task": "billing.bill_all_societies",
+        "schedule": crontab(hour=1, minute=0),  # 01:00 Asia/Kolkata, every day
+    },
 }
