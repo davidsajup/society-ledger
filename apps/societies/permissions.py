@@ -1,3 +1,4 @@
+from django.core.exceptions import ImproperlyConfigured
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import BasePermission
 
@@ -27,11 +28,20 @@ class IsSocietyMember(BasePermission):
 
 
 class HasCapability(BasePermission):
-    """Require `view.required_capability` for the caller's role IN THIS society.
+    """Require the capability `view.required_capabilities[request.method]` for the caller's role
+    IN THIS society. Methods not listed are denied.
 
     Must come after IsSocietyMember. 403 here is fine: the caller is a member, so they already
     know the society exists.
     """
 
     def has_permission(self, request, view):
-        return role_can(request.membership.role, view.required_capability)
+        membership = getattr(request, "membership", None)
+        if membership is None:
+            # A missing prerequisite must crash, never fall back to a default. A silent
+            # default is how a permission bug becomes a data leak.
+            raise ImproperlyConfigured(
+                "HasCapability needs request.membership: list IsSocietyMember before it."
+            )
+        needed = view.required_capabilities.get(request.method)
+        return needed is not None and role_can(membership.role, needed)

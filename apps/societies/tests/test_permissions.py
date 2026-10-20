@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.db import IntegrityError, transaction
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -18,7 +19,7 @@ class ProbeView(APIView):
     """Minimal view that exercises the permission classes without real endpoints."""
 
     permission_classes = [IsAuthenticated, IsSocietyMember, HasCapability]
-    required_capability = MANAGE_FLATS
+    required_capabilities = {"GET": MANAGE_FLATS}
 
     def get(self, request, society_id):
         return Response({"society": request.society.id, "role": request.membership.role})
@@ -109,3 +110,31 @@ def test_every_declared_role_is_accepted_by_the_database(green_park, role):
     """Drift guard: adding a Role without updating the CHECK constraint fails here."""
     flat = Flat.objects.create(society=green_park, label="A-1") if role == "resident" else None
     Membership.objects.create(user=make_user(f"u_{role}"), society=green_park, role=role, flat=flat)
+
+
+
+class WrongOrderView(ProbeView):
+    permission_classes = [IsAuthenticated, HasCapability, IsSocietyMember]
+
+
+def test_wrong_permission_order_crashes_loudly_instead_of_defaulting(green_park):
+    admin = make_user("admin")
+    add_member(society=green_park, user=admin, role="admin")
+    request = APIRequestFactory().get("/probe/")
+    force_authenticate(request, user=admin)
+
+    with pytest.raises(ImproperlyConfigured):
+        WrongOrderView.as_view()(request, society_id=green_park.id)
+
+
+def test_http_method_not_listed_in_required_capabilities_is_denied(green_park):
+    admin = make_user("admin")
+    add_member(society=green_park, user=admin, role="admin")
+    request = APIRequestFactory().post("/probe/")
+    force_authenticate(request, user=admin)
+
+    class PostProbe(ProbeView):
+        def post(self, request, society_id):
+            return Response({})
+
+    assert PostProbe.as_view()(request, society_id=green_park.id).status_code == 403

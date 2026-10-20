@@ -4,6 +4,7 @@ Views never ask "is this user a treasurer?". They ask "does this membership have
 Adding a role later means adding one entry here, with no view changes.
 """
 
+VIEW_FLATS = "view_flats"
 MANAGE_FLATS = "manage_flats"
 MANAGE_MEMBERS = "manage_members"
 RECORD_PAYMENT = "record_payment"
@@ -13,8 +14,12 @@ VIEW_AUDIT = "view_audit"
 VIEW_OWN_DUES = "view_own_dues"
 
 ROLE_PERMISSIONS = {
-    "admin": {MANAGE_FLATS, MANAGE_MEMBERS, VIEW_ALL_BALANCES, VIEW_AUDIT, VIEW_OWN_DUES},
-    "treasurer": {RECORD_PAYMENT, RECORD_EXPENSE, VIEW_ALL_BALANCES, VIEW_AUDIT, VIEW_OWN_DUES},
+    "admin": {
+        VIEW_FLATS, MANAGE_FLATS, MANAGE_MEMBERS, VIEW_ALL_BALANCES, VIEW_AUDIT, VIEW_OWN_DUES,
+    },
+    "treasurer": {
+        VIEW_FLATS, RECORD_PAYMENT, RECORD_EXPENSE, VIEW_ALL_BALANCES, VIEW_AUDIT, VIEW_OWN_DUES,
+    },
     "resident": {VIEW_OWN_DUES},
 }
 
