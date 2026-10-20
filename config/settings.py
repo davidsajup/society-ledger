@@ -86,6 +86,9 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    # Throttle scopes used with ScopedRateThrottle. Behind a proxy (Render) the client IP comes
+    # from X-Forwarded-For: set NUM_PROXIES at deploy time or all users share one bucket.
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min"},
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
 }
