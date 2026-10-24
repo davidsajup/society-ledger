@@ -76,7 +76,7 @@ async function getCsrfToken(): Promise<string> {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "PUT";
   body?: unknown;
   headers?: Record<string, string>;
 }

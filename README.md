@@ -12,12 +12,12 @@ A multi-tenant finance platform for housing societies. Each society has its own 
 |---|---|
 | **Super admin** | Creates societies and gives each one's president the first login. Belongs to no society and cannot see any money. |
 | **Resident** | See their flat's balance, a statement with a running balance, and printable receipts (void if the payment was reversed). Only their own flat. |
-| **Treasurer** | See collected vs outstanding, record payments (with one-tap reversal), record expenses, see who is behind month by month, and review the audit trail. |
-| **Secretary / President** | Everything the treasurer can do except expenses, plus managing flats, creating logins one by one or in bulk from a CSV/Excel sheet (with printable slips), issuing new temporary passwords and changing roles. |
+| **Treasurer** | See collected vs outstanding, record payments (with one-tap reversal), record expenses, see who is behind cycle by cycle, read the billing schedule, and review the audit trail. |
+| **Secretary / President** | Everything the treasurer can do except expenses, plus managing flats, creating logins one by one or in bulk from a CSV/Excel sheet (with printable slips), issuing new temporary passwords and changing roles. The **president alone** sets how often the society is billed and when billing starts, until the first billing run. |
 
 Office-bearers are residents too: each can have a flat and pays their own dues, shown as a "Your dues" card. Nobody can record or reverse a payment for the flat they live in; another office-bearer must.
 
-Dues are generated automatically for every flat by a scheduled job, every month or every quarter depending on the society. A flat can pay its dues in installments.
+Dues are generated automatically for every flat by a scheduled job, every month or every quarter depending on the society's billing schedule. Billing only adds a charge to each flat's ledger; it takes no money. Payments are recorded separately, and a flat can pay in installments.
 
 ## Guarantees, and where each one is tested
 
@@ -29,8 +29,8 @@ The point of this project is that these properties are enforced and *proven*, no
 | **No double-crediting.** Two payments at once cannot overpay a flat. | `select_for_update()` on the flat row; the balance is recomputed after the lock. | `apps/ledger/tests/test_payments.py`: 10 simultaneous payments against 100 owed, exactly 3 succeed. Removing the lock makes it fail. |
 | **Retries are safe.** A double click or flaky network records one payment. | `Idempotency-Key` header with a unique constraint. | Parallel same-key tests (ledger and expenses). |
 | **History cannot be rewritten.** | Ledger, expense and audit rows are append-only in Python **and** by a Postgres trigger that rejects `UPDATE`/`DELETE` even from raw SQL. Corrections are reversing entries. | `test_models.py`, `test_audit.py`, `test_expenses.py`. |
-| **Billing runs exactly once per month**, even if the job runs twice, concurrently, or crashes halfway. | One transaction per society and month, guarded by `UNIQUE(society, period)`. | `apps/billing/tests/test_billing.py`: 10 simultaneous runs, a simulated crash, and re-runs. |
-| **Every money action is audited atomically.** | The audit row is written in the same transaction as the change. | If the audit write fails, the payment (or the whole billing month) rolls back. |
+| **Billing runs exactly once per cycle** (month or quarter), even if the job runs twice, concurrently, or crashes halfway. It never runs before the society's start date, and the schedule cannot change once billing has started. | One transaction per society and cycle, guarded by `UNIQUE(society, period)`. The start date and the schedule change both go through one lock on the society row. | `apps/billing/tests/test_billing.py`: 10 simultaneous runs, a simulated crash, and re-runs. |
+| **Every money action is audited atomically.** | The audit row is written in the same transaction as the change. | If the audit write fails, the payment (or the whole billing cycle) rolls back. |
 | **Money is exact.** | `Decimal` everywhere, strings in JSON and in the browser, never floats. | Tests for exact cents; the UI never converts money to a JavaScript number. |
 | **No self-dealing.** Nobody records or reverses a payment for their own flat, or changes their own role. | `refuse_own_flat` in the ledger service (checked before the lock, so nothing is written); `change_member` refuses self-change and keeps at least one manager under row locks. | `apps/ledger/tests/test_self_dealing.py`, `apps/societies/tests/test_change_role.py` |
 | **A super admin cannot read a society's money.** | The platform role is a superuser flag with no membership; every society route is 404 for them. | `apps/onboarding/tests/` and the super-admin case in `test_cross_tenant.py` |
@@ -78,7 +78,7 @@ npm run dev
 
 Open http://localhost:5173 and log in as `vikram` (president), `asha` (secretary), `tara` (treasurer) or `ravi`, `meera`, `kiran`, `priya`, `john`, `nisha` (residents), with the password you chose.
 
-**Monthly billing** normally runs from Celery beat. To try it by hand, or to run the worker:
+**Billing** normally runs from Celery beat: every day at 01:00 India time it bills each society's current cycle (a month or a quarter), once the society's billing start date has arrived. The worker, beat and Redis must all be running for that. To run it by hand, or to run the worker:
 
 ```bash
 python manage.py run_billing --period 2026-11        # idempotent: run it twice, it bills once
@@ -86,6 +86,8 @@ docker compose up -d redis
 celery -A config worker -l info --pool=solo          # --pool=solo is needed on Windows
 celery -A config beat -l info
 ```
+
+`run_billing` refuses, with a message, to bill any cycle before a society's billing start date. A quarterly society only accepts the first day of January, April, July or October as `--period`.
 
 ### Demo mode (for visitors with no login)
 
@@ -122,7 +124,7 @@ apps/
   billing/     billing runs (monthly or quarterly) and the Celery tasks
   expenses/    append-only expenses with reversals
   audit/       append-only audit log
-  reports/     read-only summaries, dues by month, billing history
+  reports/     read-only summaries, dues by cycle, billing history
   accounts/    custom user, login, passwords, demo mode
   onboarding/  the super admin: creates societies and first presidents
   imports/     bulk upload of flats and people from CSV or Excel

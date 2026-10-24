@@ -11,12 +11,20 @@ export type Capability =
   | "reversePayment"
   | "recordExpense"
   | "manageFlats"
-  | "manageMembers";
+  | "manageMembers"
+  | "viewBillingSettings"
+  | "manageBilling";
 
-const OFFICE_BEARER: Capability[] = ["viewAllBalances", "recordPayment", "reversePayment"];
+const OFFICE_BEARER: Capability[] = [
+  "viewAllBalances",
+  "recordPayment",
+  "reversePayment",
+  "viewBillingSettings",
+];
 
 const TABLE: Record<Role, ReadonlySet<Capability>> = {
-  president: new Set<Capability>([...OFFICE_BEARER, "manageFlats", "manageMembers"]),
+  // Only the president decides how often the society is billed and when billing starts.
+  president: new Set<Capability>([...OFFICE_BEARER, "manageFlats", "manageMembers", "manageBilling"]),
   secretary: new Set<Capability>([...OFFICE_BEARER, "manageFlats", "manageMembers"]),
   treasurer: new Set<Capability>([...OFFICE_BEARER, "recordExpense"]),
   resident: new Set<Capability>(),

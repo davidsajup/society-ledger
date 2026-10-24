@@ -46,6 +46,18 @@ export function nextCycleStart(cycleMonths: number, today = new Date()): string 
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
+/** The first days of the next `count` cycles after today: the dates billing may start on. */
+export function upcomingCycleStarts(cycleMonths: number, count = 6, today = new Date()): string[] {
+  const out: string[] = [];
+  let from = today;
+  for (let i = 0; i < count; i++) {
+    const next = nextCycleStart(cycleMonths, from);
+    out.push(next);
+    from = new Date(`${next}T00:00:00`);
+  }
+  return out;
+}
+
 /** Moment-in-time helpers (ISO timestamps from the API). */
 export const timeLabel = (iso: string) => time.format(new Date(iso));
 export const dayHeading = (iso: string) => weekday.format(new Date(iso));

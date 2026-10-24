@@ -114,6 +114,14 @@ export interface PlatformManager {
   login_status: LoginStatus;
 }
 
+/** How the society is billed, and whether that can still be changed. */
+export interface BillingSettings {
+  billing_cycle_months: number;
+  billing_start: string | null;
+  locked: boolean; // true once the first billing run exists
+  flats_with_amounts: number;
+}
+
 export interface PlatformSociety {
   id: number;
   name: string;

@@ -51,8 +51,8 @@ Run the API and the UI as in the README, then open the UI and log in with the su
 | Society name | As residents know it. |
 | Short name | Lower-case letters, numbers and dashes. Used in usernames (`ravi.a-101@green-meadows`). Cannot be changed later. |
 | President's full name | They get the first login. |
-| Billed every | 3 months (quarterly) or 1 month. Cannot be changed by the president. |
-| Automatic billing starts on | The first day of a cycle, today or later. For quarterly billing: 1 January, 1 April, 1 July or 1 October. Nothing is billed before this date, so you can set up flats first. |
+| Billed every | 3 months (quarterly) or 1 month. A starting value: the president can change it on **People → Billing** until the first billing run. |
+| Automatic billing starts on | The first day of a cycle, today or later. For quarterly billing: 1 January, 1 April, 1 July or 1 October. Nothing is billed before this date, so you can set up flats first. The president can move it, until the first billing run. |
 
 The app shows the president's username and a one-time temporary password **once**. Copy them and give them to the president privately. If they are lost, use **New password** on that society's card.
 
@@ -98,9 +98,13 @@ On or after the billing start date the daily job charges every flat once for the
 .venv/Scripts/python.exe manage.py run_billing
 ```
 
-It bills each society's current cycle and skips cycles already billed, so it is safe to run twice. Check the **Dues** page.
+It bills each society's current cycle and skips cycles already billed, so it is safe to run twice. It refuses, with a message, to bill any cycle before the society's billing start date, so running it early cannot create charges. Check the **Dues** page.
 
 Payments are recorded by the president, secretary or treasurer (never for the flat they live in). A flat may pay its quarter in **any number of installments**; it cannot pay more than it owes, and cannot pay in advance.
+
+### Changing the schedule
+
+The president opens **People → Billing** to change how often the society is billed and when billing starts. The secretary and treasurer can read it (the treasurer reaches it from the link on the Dues page). It can be changed only until the first billing run exists; after that it is fixed. Changing the cycle asks the president to confirm that every flat's amount has been checked, because each amount is for one cycle.
 
 ## 8. Check it against your Excel
 

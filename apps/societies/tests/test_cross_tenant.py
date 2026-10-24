@@ -13,20 +13,15 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.urls import reverse
+from django.urls import URLResolver, reverse
 from rest_framework.test import APIClient
 
-from apps.audit import urls as audit_urls
+import config.urls as project_urls
 from apps.audit.models import AuditLog
-from apps.expenses import urls as expenses_urls
 from apps.expenses.models import Expense
 from apps.expenses.services import record_expense
-from apps.imports import urls as imports_urls
-from apps.ledger import urls as ledger_urls
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services import record_charge
-from apps.reports import urls as reports_urls
-from apps.societies import urls as societies_urls
 from apps.societies.models import Flat, Membership, Society
 from apps.societies.services import add_member
 
@@ -55,6 +50,7 @@ ROUTES = {
     "member-detail": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
     "import-preview": lambda b: {"society_id": b["society"].id},
     "import-confirm": lambda b: {"society_id": b["society"].id},
+    "billing-settings": lambda b: {"society_id": b["society"].id},
 }
 
 PAYLOAD = {
@@ -224,9 +220,23 @@ def test_leaked_response_bodies_never_mention_other_tenants_data(attacker, tenan
 # --- Guard: a new route cannot ship without cross-tenant coverage ---------------------------
 
 
+def society_route_names():
+    """Every named route the project mounts under /api/societies/<society_id>/.
+
+    Read from the real URLconf, not from a list of modules, so a new app's urls.py cannot be
+    added to the project and silently skip this suite.
+    """
+    prefix = "api/societies/<int:society_id>/"
+    return {
+        route.name
+        for entry in project_urls.urlpatterns
+        if isinstance(entry, URLResolver) and str(entry.pattern) == prefix
+        for route in entry.url_patterns
+    }
+
+
 def test_every_societies_route_is_covered_by_this_suite():
-    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls, reports_urls, imports_urls)
-    declared = {p.name for module in modules for p in module.urlpatterns}
+    declared = society_route_names()
     assert declared == set(ROUTES), (
         f"Routes without cross-tenant tests: {declared - set(ROUTES)}; "
         f"stale entries: {set(ROUTES) - declared}"

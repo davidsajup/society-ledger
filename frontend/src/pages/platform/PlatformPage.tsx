@@ -347,8 +347,11 @@ function NewSocietyModal({
             required
           />
           <div>
-            <Text size="sm" fw={500} mb={4}>
+            <Text size="sm" fw={500}>
               Maintenance is billed every
+            </Text>
+            <Text size="xs" c="dimmed" mb={4}>
+              A starting value: the president can change it until the first billing date.
             </Text>
             <SegmentedControl
               fullWidth

@@ -1,12 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils import timezone
 
 from apps.accounts.credentials import make_username, set_temporary_password
 from apps.audit import services as audit
 from apps.audit.models import AuditLog
-from apps.billing.services import is_cycle_start
+from apps.billing.services import validate_billing_schedule
 
 from . import roles
 from .models import Membership, Society
@@ -215,18 +214,7 @@ def create_society(
         billing_start=billing_start,
     )
     society.full_clean(exclude=["created_at"])  # slug format and uniqueness, errors per field
-    if billing_start is not None:
-        if not is_cycle_start(billing_start, billing_cycle_months):
-            raise ValidationError(
-                {
-                    "billing_start": "Billing must start on the first day of a cycle "
-                    "(the 1st of January, April, July or October for quarterly billing)."
-                }
-            )
-        if billing_start < timezone.localdate():
-            raise ValidationError(
-                {"billing_start": "The billing start date cannot be in the past."}
-            )
+    validate_billing_schedule(cycle_months=billing_cycle_months, start=billing_start)
     society.save()
     audit.record(
         society=society,

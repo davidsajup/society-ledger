@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth, RequireFlat, RequirePlatformAdmin, RequireRole } from "./auth/session";
 import { AppLayout } from "./layout/AppLayout";
 import { ActivityPage } from "./pages/ActivityPage";
+import { BillingPage } from "./pages/BillingPage";
 import { PeoplePage } from "./pages/admin/PeoplePage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { DuesPage } from "./pages/DuesPage";
@@ -52,6 +53,7 @@ export function App() {
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="expenses" element={<ExpensesPage />} />
               <Route path="activity" element={<ActivityPage />} />
+              <Route path="billing" element={<BillingPage />} />
               <Route path="flat/:flatId/statement" element={<StatementPage />} />
               <Route path="flat/:flatId/receipt/:entryId" element={<ReceiptPage />} />
             </Route>

@@ -29,6 +29,8 @@ These are invariants. Code that breaks one of them is a bug, even if no test cat
 - A billing run is one transaction: a cycle is fully billed or not billed at all, never half. Flats with `maintenance_amount = 0` are not billed.
 - Each flat gets at most one maintenance charge per period, also backed by a unique constraint.
 - The automatic job never bills a society before its `billing_start` date, so flats can be set up mid-cycle without an early charge.
+- The president decides the billing cycle (monthly or every 3 months) and the start date (the first day of a cycle, not in the past, always set). The secretary and treasurer can read them; nobody else can, and the super admin cannot change them. They can change only until the first billing run exists. Changing the cycle needs `amounts_reviewed`, because each flat's amount is for one cycle. Saving the settings and billing both lock the society row, and billing re-reads the schedule after taking the lock.
+- A society with a billing start date can never be billed for a cycle before it. The rule lives in `run_billing` (the service), so the daily job, the `run_billing` command and any future caller are all covered.
 - A charge may be paid in any number of installments, but a payment can never exceed what is owed. There is no advance payment or credit.
 
 ## Audit

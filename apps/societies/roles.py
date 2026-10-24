@@ -7,6 +7,8 @@ Adding a role later means adding one entry here, with no view changes.
 VIEW_FLATS = "view_flats"
 MANAGE_FLATS = "manage_flats"
 MANAGE_MEMBERS = "manage_members"
+VIEW_BILLING_SETTINGS = "view_billing_settings"
+MANAGE_BILLING = "manage_billing"
 RECORD_PAYMENT = "record_payment"
 REVERSE_ENTRY = "reverse_entry"
 RECORD_EXPENSE = "record_expense"
@@ -23,13 +25,15 @@ _OFFICE_BEARER = {
     VIEW_ALL_BALANCES,
     VIEW_EXPENSES,
     VIEW_AUDIT,
+    VIEW_BILLING_SETTINGS,
     VIEW_OWN_DUES,
     RECORD_PAYMENT,
     REVERSE_ENTRY,
 }
 
 ROLE_PERMISSIONS = {
-    "president": _OFFICE_BEARER | {MANAGE_FLATS, MANAGE_MEMBERS},
+    # Only the president decides how often the society is billed and when billing starts.
+    "president": _OFFICE_BEARER | {MANAGE_FLATS, MANAGE_MEMBERS, MANAGE_BILLING},
     "secretary": _OFFICE_BEARER | {MANAGE_FLATS, MANAGE_MEMBERS},
     # Only the treasurer records spending (money out).
     "treasurer": _OFFICE_BEARER | {RECORD_EXPENSE},

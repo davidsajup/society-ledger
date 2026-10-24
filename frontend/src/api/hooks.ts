@@ -4,6 +4,7 @@ import { ApiError, api, forgetCsrfToken } from "./client";
 import type {
   AuditRow,
   BillingRun,
+  BillingSettings,
   DemoInfo,
   Dues,
   ExpenseCategory,
@@ -38,6 +39,7 @@ export const keys = {
   dues: (s: number) => ["dues", s] as const,
   audit: (s: number) => ["audit", s] as const,
   billingRuns: (s: number) => ["billing-runs", s] as const,
+  billingSettings: (s: number) => ["billing-settings", s] as const,
   flats: (s: number) => ["flats", s] as const,
   members: (s: number) => ["members", s] as const,
   platformSocieties: ["platform-societies"] as const,
@@ -171,6 +173,30 @@ export function useFlats(societyId: number) {
   return useQuery({
     queryKey: keys.flats(societyId),
     queryFn: () => api<Flat[]>(`${base(societyId)}/flats/`),
+  });
+}
+
+export function useBillingSettings(societyId: number) {
+  return useQuery({
+    queryKey: keys.billingSettings(societyId),
+    queryFn: () => api<BillingSettings>(`${base(societyId)}/billing-settings/`),
+  });
+}
+
+export function useSaveBillingSettings(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      billing_cycle_months: number;
+      billing_start: string;
+      amounts_reviewed: boolean;
+    }) => api<BillingSettings>(`${base(societyId)}/billing-settings/`, { method: "PUT", body: v }),
+    // The cycle is also on the session (it words every page: "per quarter"), so refresh that too.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.billingSettings(societyId) }),
+        queryClient.invalidateQueries({ queryKey: keys.me }),
+      ]),
   });
 }
 

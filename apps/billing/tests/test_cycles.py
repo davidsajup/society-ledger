@@ -15,6 +15,7 @@ from decimal import Decimal
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 
 from apps.billing.models import BillingRun
 from apps.billing.services import current_period, is_cycle_start, period_note, run_billing
@@ -158,6 +159,76 @@ def test_a_society_is_not_billed_before_its_billing_start(monkeypatch, quarterly
     assert bill_all_societies.delay().get() == 1
     assert BillingRun.objects.get().period == date(2027, 1, 1)
     assert outstanding_for_flat(flat) == D("4500.00")
+
+
+# --- the start date holds for every way into billing ---------------------------------------
+
+
+@pytest.fixture
+def starts_in_january(quarterly):
+    society, flat = quarterly
+    society.billing_start = date(2027, 1, 1)
+    society.save()
+    return society, flat
+
+
+def test_billing_a_cycle_before_the_start_date_is_refused_and_writes_nothing(starts_in_january):
+    society, flat = starts_in_january
+
+    with pytest.raises(ValidationError) as exc:
+        run_billing(society=society, period=date(2026, 10, 1))
+
+    assert "starts on 01 January 2027" in exc.value.messages[0]
+    assert BillingRun.objects.count() == 0
+    assert LedgerEntry.objects.count() == 0
+
+
+def test_the_start_date_itself_and_later_cycles_can_be_billed(starts_in_january):
+    society, flat = starts_in_january
+
+    _, first = run_billing(society=society, period=date(2027, 1, 1))
+    _, second = run_billing(society=society, period=date(2027, 4, 1))
+
+    assert (first, second) == (True, True)
+
+
+def test_a_society_with_no_start_date_can_be_billed_for_any_cycle(quarterly):
+    society, _ = quarterly
+    assert society.billing_start is None
+
+    _, created = run_billing(society=society, period=date(2026, 10, 1))
+
+    assert created is True
+
+
+def test_the_command_refuses_to_bill_the_current_quarter_before_the_start(
+    monkeypatch, starts_in_january, capsys
+):
+    """The hazard this fixes: `manage.py run_billing` used to charge the current quarter at once."""
+    monkeypatch.setattr(
+        "apps.billing.management.commands.run_billing.current_period",
+        lambda today=None, cycle_months=1: date(2026, 10, 1),
+    )
+
+    call_command("run_billing")
+
+    assert "skipped" in capsys.readouterr().out
+    assert BillingRun.objects.count() == 0
+    assert LedgerEntry.objects.count() == 0
+
+
+def test_the_command_refuses_an_explicit_period_before_the_start(starts_in_january, capsys):
+    call_command("run_billing", period="2026-10")
+
+    assert "skipped" in capsys.readouterr().out
+    assert LedgerEntry.objects.count() == 0
+
+
+def test_the_command_bills_the_start_cycle(starts_in_january, capsys):
+    call_command("run_billing", period="2027-01")
+
+    assert "billed 2027-01" in capsys.readouterr().out
+    assert BillingRun.objects.get().period == date(2027, 1, 1)
 
 
 # --- flexible payments ----------------------------------

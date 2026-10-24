@@ -94,6 +94,9 @@ export function DuesPage() {
           Payments are applied to the oldest dues first. This view is calculated from the ledger,
           so it always agrees with each flat&apos;s balance.
         </Text>
+        <Button component={Link} to={`/s/${societyId}/billing`} variant="subtle" h={44} px={0} mt={4}>
+          How billing works and the billing schedule
+        </Button>
       </Card>
 
       {periods.length === 0 ? (
