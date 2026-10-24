@@ -101,6 +101,8 @@ export interface Member {
   login_status: LoginStatus;
   role: Role;
   flat: number | null;
+  phone: string; // contact details: shown to the president and secretary only
+  email: string;
 }
 
 /** A society as the super admin sees it: counts and logins, never money. */
@@ -199,4 +201,46 @@ export interface DemoAccount {
 export interface DemoInfo {
   enabled: boolean;
   accounts: DemoAccount[];
+}
+
+// --- Bulk import (CSV or Excel) ---------------------------------------------------------------
+
+export interface ImportRow {
+  row: number; // the spreadsheet row, so a problem can be found in the file
+  flat: string;
+  name: string;
+  phone: string;
+  email: string;
+  maintenance: string; // exact "4500.00", never a number
+  role: Role;
+}
+
+export interface ImportProblem {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface ImportPreview {
+  rows: ImportRow[];
+  errors: ImportProblem[];
+  ignored_columns: string[];
+  summary: { flats: number; people: number; total_per_cycle: string };
+  cycle_months: number;
+}
+
+/** One new person's login. The password exists only in this response. */
+export interface ImportedLogin {
+  name: string;
+  flat: string;
+  role: Role;
+  username: string;
+  temp_password: string;
+  expires_at: string;
+}
+
+export interface ImportResult {
+  flats: number;
+  people: number;
+  logins: ImportedLogin[];
 }

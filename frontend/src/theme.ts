@@ -37,6 +37,7 @@ export const theme = createTheme({
     TextInput: { defaultProps: { size: "md" }, styles: { input: { minHeight: 44 } } },
     PasswordInput: { defaultProps: { size: "md" }, styles: { input: { minHeight: 44 } } },
     Select: { defaultProps: { size: "md" }, styles: { input: { minHeight: 44 } } },
+    FileInput: { defaultProps: { size: "md" }, styles: { input: { minHeight: 44 } } },
     Card: { defaultProps: { padding: "lg", withBorder: true } },
   },
 });

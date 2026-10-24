@@ -124,6 +124,11 @@ export function ResidentsPage() {
                     <Text size="xs" c="dimmed" truncate>
                       {member.user}
                     </Text>
+                    {(member.phone || member.email) && (
+                      <Text size="xs" c="dimmed" truncate>
+                        {[member.phone, member.email].filter(Boolean).join(" · ")}
+                      </Text>
+                    )}
                   </div>
                   <Stack gap={4} align="flex-end">
                     <Badge variant="light" color={ROLE_COLOR[member.role]}>

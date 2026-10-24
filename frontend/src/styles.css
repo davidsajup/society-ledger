@@ -60,6 +60,13 @@
     box-shadow: none !important;
   }
 
+  /* Login slips: two to a row, never split across pages, with a cut line. */
+  .slip {
+    break-inside: avoid;
+    border: 1px dashed #666 !important;
+    box-shadow: none !important;
+  }
+
   * {
     color-scheme: light !important;
   }

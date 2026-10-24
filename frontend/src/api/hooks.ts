@@ -10,6 +10,9 @@ import type {
   ExpenseList,
   Flat,
   FlatLedger,
+  ImportPreview,
+  ImportResult,
+  ImportRow,
   CreatedSociety,
   IssuedLogin,
   LedgerEntry,
@@ -352,5 +355,36 @@ export function useReissueManager() {
         body: {},
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.platformSocieties }),
+  });
+}
+
+// --- Bulk import ---------------------------------------------------------------------------------
+
+/** Read and check a file. Writes nothing on the server. */
+export function useImportPreview(societyId: number) {
+  return useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return api<ImportPreview>(`${base(societyId)}/imports/preview/`, {
+        method: "POST",
+        body: form,
+      });
+    },
+  });
+}
+
+/** Create everything in the checked rows. The result holds the one-time passwords. */
+export function useImportConfirm(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: ImportRow[]) =>
+      api<ImportResult>(`${base(societyId)}/imports/confirm/`, { method: "POST", body: { rows } }),
+    onSuccess: () => {
+      // Flats, people and what every flat owes have all changed.
+      for (const key of [keys.flats, keys.members, keys.summary, keys.dues]) {
+        queryClient.invalidateQueries({ queryKey: key(societyId) });
+      }
+    },
   });
 }

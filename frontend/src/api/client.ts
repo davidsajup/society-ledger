@@ -84,14 +84,21 @@ interface RequestOptions {
 async function send(path: string, options: RequestOptions, retry: boolean): Promise<Response> {
   const method = options.method ?? "GET";
   const headers: Record<string, string> = { Accept: "application/json", ...options.headers };
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  // A file upload is multipart: the browser must set Content-Type itself (it adds the boundary).
+  const isUpload = options.body instanceof FormData;
+  if (options.body !== undefined && !isUpload) headers["Content-Type"] = "application/json";
   if (method !== "GET") headers["X-CSRFToken"] = await getCsrfToken();
 
   const response = await fetch(`/api${path}`, {
     method,
     headers,
     credentials: "same-origin",
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : isUpload
+          ? (options.body as FormData)
+          : JSON.stringify(options.body),
   });
 
   // A stale CSRF token (after a session change) is the one 403 worth retrying, exactly once.
