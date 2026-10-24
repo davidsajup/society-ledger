@@ -314,3 +314,45 @@ Format: what we chose, what we rejected, why. Newest at the bottom.
 - **Rejected:** A role switcher; a sixth bottom-bar item.
 - **Why:** Seeing your own dues is a resident capability, not a resident role. Deciding by capability stops the UI from assuming "only residents have flats".
 
+## 059 — The super admin is a platform flag, not a society role (2026-10-24)
+- **Chose:** A Django superuser (`is_superuser`) who belongs to **no** society. `IsPlatformAdmin` (apps/onboarding/permissions.py) guards `/api/platform/`, which can create a society and its first president's login, list societies (counts and logins only) and reissue a lost president/secretary password. Every `/api/societies/<id>/` route still answers 404 to them.
+- **Rejected:** A `Membership` role called "super admin" (it would live inside one tenant); a super admin who can read every society's books (one stolen password would expose all of them); using the Django admin site (it bypasses the services, so no audit rows and no password rules).
+- **Why:** Someone has to be above the societies to create them, but that power must not become a tenant escape hatch. The blast radius of a compromised super admin is "can create societies", not "can read everyone's money".
+- **Tested:** `apps/onboarding/tests/test_platform_api.py` (every society role refused; atomic creation; the password in one response only) and `test_cross_tenant.py` (the super admin gets 404 on every society route with every method). Mutation checks on the permission, the service guard and the `me` flag all fail the suite.
+
+## 060 — Billing cycle belongs to the society, and automatic billing waits for a start date (2026-10-24)
+- **Chose:** `Society.billing_cycle_months` (1 or 3) and `Society.billing_start`. `current_period(today, cycle)` returns the first day of the cycle (1 Jan/Apr/Jul/Oct for quarterly). `run_billing` refuses a period that is not a cycle start. The daily job computes the period per society and skips a society until its `billing_start`. `Flat.monthly_maintenance` was renamed `maintenance_amount` (a true `RenameField`, reversible, tested on real rows) because it now means "per cycle".
+- **Rejected:** Keeping the old field name for quarterly amounts (a name that lies); splitting a quarterly fee into three monthly charges (does not divide evenly); a new `BillingRun` cycle field (the period date already identifies the cycle).
+- **Why the start date:** the daily job bills "the current cycle" for every society. On 24 Oct that is the whole of Q4. Without a start date, giving a new quarterly society flats with amounts would charge it a full quarter it never agreed to. The start date makes setup safe.
+- **Why it is still idempotent:** every day in a quarter maps to the same `(society, period)`, so the unique constraint makes every later run a no-op.
+
+## 061 — Flexible payments are installments, not advance credit (2026-10-24)
+- **Chose:** A quarterly charge can be paid in any number of partial payments (already how `record_payment` works), but a payment can never exceed what is owed.
+- **Rejected:** Allowing payment in advance or a credit balance.
+- **Why:** The "never overpaid" rule is what the row lock and the concurrency tests protect. Credit would need a new ledger concept and would change the dues grid's allocation. Installments give the flexibility residents asked for without touching the invariant.
+
+## 062 — Phone and email live on Membership, not on User (2026-10-24)
+- **Chose:** `Membership.phone` and `Membership.email`, set by the bulk import and shown only in the president/secretary member list.
+- **Rejected:** `User.email` and a new `User.phone`.
+- **Why:** A user is global; a person can belong to two societies. Contact details typed by society A's president must not follow that person into society B. The audit log stores counts and usernames only, and the super admin's list has no contact fields.
+
+## 063 — Bulk import is preview, then confirm, and the server checks twice (2026-10-24)
+- **Chose:** `imports/preview/` reads the file and returns rows and problems, writing nothing. `imports/confirm/` receives the rows as JSON (not the file), locks the society row with `select_for_update`, **re-validates every row inside the lock**, and creates flats, people and logins in one transaction.
+- **Rejected:** Trusting the preview (the request body is whatever the client sends); validating once before the lock (a second import or a hand-added flat could land in between); creating rows as they parse; updating existing flats from the file (too easy to overwrite by accident, so an existing label is an error).
+- **Why:** This is the same check-then-act family as double-crediting. Tests: an edited preview, a flat created between preview and confirm, confirming twice, and two simultaneous imports (one is created, one is cleanly refused). Removing the lock fails the race test; skipping re-validation fails five.
+
+## 064 — Uploaded spreadsheets are untrusted input (2026-10-24)
+- **Chose:** `.csv` and `.xlsx` only, 1 MB, 300 rows. Excel is opened read-only with `data_only=True` (formulas are never evaluated), first sheet only, and refused if it has macros or would unzip to more than 10 MB. `openpyxl` uses `defusedxml`, so an XML entity declaration is rejected. Nothing is stored.
+- **Rejected:** `.xls`/`.xlsm`; evaluating formulas; storing the file for later.
+- **Dependency (approved):** `openpyxl` and `defusedxml`.
+- **Note:** my first entity test passed for the wrong reason (this openpyxl writes strings inline, so the file I tampered with did not exist). It now injects the entity into the sheet XML and has a harmless-comment control that must still parse.
+
+## 065 — Login slips show the password once, and the CSV defends against formulas (2026-10-24)
+- **Chose:** The confirm response is the only place passwords exist (`Cache-Control: no-store`). The browser shows printable slips and a CSV download, keeps them across tab switches, and asks "Leave without the passwords?" before discarding. Every CSV cell starting with `= + - @` gets a leading apostrophe.
+- **Rejected:** Emailing passwords; storing them to show later; a CSV with raw cells.
+- **Why:** A resident's name is typed by someone else. Opened in Excel, a name like `=HYPERLINK(...)` can run. Defusing every cell removes the risk.
+
+## 066 — No opening balances: start at zero on a new quarter (2026-10-24)
+- **Chose:** Everyone begins at zero at the start of a quarter; anything owed from before stays in the old Excel.
+- **Rejected:** An opening-balance charge per flat; re-creating old months and payments (every row would be stamped with today's date, and one typo is permanent in an append-only ledger).
+- **Why:** The simplest honest starting point. If a society ever needs arrears carried in, add one "opening balance" charge per flat through `record_charge`, as a separate decision.

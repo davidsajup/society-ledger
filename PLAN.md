@@ -2,7 +2,9 @@
 
 **Current task:** M6 — React frontend (first slice built and manually tested; refine the screens next)
 
-**Next (phase B of onboarding):** CSV import of people (preview, then confirm, in one transaction; creates missing flats; one login per person) and a printable credentials-slips page plus a one-time CSV download. Reuses `create_member_login`. CSV only; Excel needs a new library, so ask first.
+**Next:** put the real society in. Follow [docs/real-data.md](docs/real-data.md): backup, migrate Supabase (`societies/0005-0006`, `audit/0005-0006`, each with your go-ahead), create your super admin, onboard the society as a quarterly society starting 1 Jan 2027, upload the sheet, hand out slips. Then understand and tighten what was built before adding features.
+
+**Built since the roles work:** super admin and `/platform` page; quarterly billing with `billing_start`; bulk import of flats and people from CSV/Excel with preview, confirm and printable slips; phone and email per membership; 888 backend tests.
 
 **Next demo step (M5):** a PUBLIC demo needs its own database that is reseeded regularly, and `DEMO_MODE` set only there.
 

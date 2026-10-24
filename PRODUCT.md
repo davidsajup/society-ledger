@@ -29,7 +29,7 @@ The books are tamper-evident and segregated by design: append-only ledger, deriv
 - Frontend is limited to three areas: resident dashboard (dues, balance, statement, receipts), treasurer dashboard (collections vs outstanding, record payments and expenses, dues grid, activity), and the people/admin pages (flats, people, roles, logins).
 - Stack: React, TypeScript, Vite, TanStack Query, Mantine; Django/DRF backend. Money is always handled as exact decimal strings, never floats.
 - Phone-first: the bottom navigation holds at most five items.
-- Out of scope for now: complaints, online payments, social features, reminders, real-user onboarding. AI features come only after the main build.
+- Out of scope for now: complaints, online payments, social features, reminders. Real-user onboarding is now in scope for a single society run locally; public deployment is still open. AI features come only after the main build.
 
 ## Brand Commitments
 Name: Society Ledger. Voice: plain, calm and trustworthy. No hype, no jargon, no jokes about money. Wording must make sense to a non-technical resident.

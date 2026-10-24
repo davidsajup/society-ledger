@@ -10,13 +10,14 @@ A multi-tenant finance platform for housing societies. Each society has its own 
 
 | Role | What they can do |
 |---|---|
+| **Super admin** | Creates societies and gives each one's president the first login. Belongs to no society and cannot see any money. |
 | **Resident** | See their flat's balance, a statement with a running balance, and printable receipts (void if the payment was reversed). Only their own flat. |
 | **Treasurer** | See collected vs outstanding, record payments (with one-tap reversal), record expenses, see who is behind month by month, and review the audit trail. |
-| **Secretary / President** | Everything the treasurer can do except expenses, plus managing flats, creating logins, issuing new temporary passwords and changing roles. |
+| **Secretary / President** | Everything the treasurer can do except expenses, plus managing flats, creating logins one by one or in bulk from a CSV/Excel sheet (with printable slips), issuing new temporary passwords and changing roles. |
 
 Office-bearers are residents too: each can have a flat and pays their own dues, shown as a "Your dues" card. Nobody can record or reverse a payment for the flat they live in; another office-bearer must.
 
-Monthly dues are generated automatically for every flat by a scheduled job.
+Dues are generated automatically for every flat by a scheduled job, every month or every quarter depending on the society. A flat can pay its dues in installments.
 
 ## Guarantees, and where each one is tested
 
@@ -32,6 +33,9 @@ The point of this project is that these properties are enforced and *proven*, no
 | **Every money action is audited atomically.** | The audit row is written in the same transaction as the change. | If the audit write fails, the payment (or the whole billing month) rolls back. |
 | **Money is exact.** | `Decimal` everywhere, strings in JSON and in the browser, never floats. | Tests for exact cents; the UI never converts money to a JavaScript number. |
 | **No self-dealing.** Nobody records or reverses a payment for their own flat, or changes their own role. | `refuse_own_flat` in the ledger service (checked before the lock, so nothing is written); `change_member` refuses self-change and keeps at least one manager under row locks. | `apps/ledger/tests/test_self_dealing.py`, `apps/societies/tests/test_change_role.py` |
+| **A super admin cannot read a society's money.** | The platform role is a superuser flag with no membership; every society route is 404 for them. | `apps/onboarding/tests/` and the super-admin case in `test_cross_tenant.py` |
+| **A bulk import is all-or-nothing and re-checked by the server.** | One transaction under a per-society lock; the confirm re-validates every row. | `apps/imports/tests/`: bad row, edited preview, double confirm, two imports at once |
+| **Uploaded spreadsheets cannot hurt the server.** | Size/row limits, no formula evaluation, no macros, zip-bomb and XML-entity guards. | `apps/imports/tests/test_parsing.py` |
 | **Admin-issued logins are safe.** | Random one-time passwords (never derived from the flat), changed at first login and enforced on the server, expiring if unused, with limited re-issue. | `apps/accounts/tests/test_credentials.py` |
 | **Demo mode cannot be abused.** | Off by default, allowlisted users only, never staff or superusers. | `apps/accounts/tests/test_demo.py` |
 
@@ -104,7 +108,7 @@ Tests run against a local Postgres container (never Supabase), because row locki
 
 ```bash
 docker compose up -d db-test
-python -m pytest              # 479 tests
+python -m pytest              # 888 tests
 python -m ruff check .
 cd frontend && npm run typecheck && npm run build
 ```
@@ -115,11 +119,13 @@ cd frontend && npm run typecheck && npm run build
 apps/
   societies/   tenants, flats, memberships, roles and permissions
   ledger/      append-only ledger, payments, reversals, idempotency
-  billing/     monthly billing runs and the Celery tasks
+  billing/     billing runs (monthly or quarterly) and the Celery tasks
   expenses/    append-only expenses with reversals
   audit/       append-only audit log
   reports/     read-only summaries, dues by month, billing history
   accounts/    custom user, login, passwords, demo mode
+  onboarding/  the super admin: creates societies and first presidents
+  imports/     bulk upload of flats and people from CSV or Excel
   core/        shared tenancy, money and append-only machinery
 config/        Django settings, URLs, Celery
 frontend/      React + TypeScript app
@@ -131,8 +137,8 @@ Business logic lives in `services.py` modules, not in views.
 ## Scope and known limitations
 
 - **Payments are recorded by a person.** Money arrives outside the app (cash, UPI, bank transfer), so the treasurer records it. There is no online payment processing.
-- **No self-sign-up or email.** Office-bearers create logins and hand over passwords. CSV import and printable credential slips are planned.
-- **Not deployed yet.** CI and a hosted demo are the next milestone.
+- **No self-sign-up or email.** Office-bearers create logins and hand over passwords, one by one or from an uploaded sheet with printable slips.
+- **Not deployed yet, and not safe for residents over the internet.** There is no HTTPS or production server configuration. Run it on your own computer. See [docs/real-data.md](docs/real-data.md) for setting up a real society.
 - **The frontend has no automated tests**, only strict TypeScript and manual checks.
 - Lists are capped (200 rows); there is no pagination yet.
 - Out of scope for now: complaints, social features, reminders, and AI features (receipt extraction, natural-language questions), which are planned for after the main build. See [PLAN.md](PLAN.md).
@@ -140,5 +146,6 @@ Business logic lives in `services.py` modules, not in views.
 ## Documentation
 
 - [PLAN.md](PLAN.md): milestones, what is done, what is next.
-- [docs/decisions.md](docs/decisions.md): 53 numbered decisions with what was chosen, what was rejected and why.
+- [docs/decisions.md](docs/decisions.md): 66 numbered decisions with what was chosen, what was rejected and why.
 - [docs/domain-rules.md](docs/domain-rules.md): the rules the code must never break.
+- [docs/real-data.md](docs/real-data.md): setting up a real society, step by step.

@@ -23,9 +23,12 @@ These are invariants. Code that breaks one of them is a bug, even if no test cat
 - Residents may read only their own flat's ledger. Another flat in the same society is a 404, identical to a flat that does not exist.
 
 ## Billing
-- Monthly billing for a `(society, period)` pair happens **exactly once**. A unique constraint on BillingRun enforces this, and the job is safe to run twice or concurrently.
-- A billing run is one transaction: a month is fully billed or not billed at all, never half. Flats with `monthly_maintenance = 0` are not billed.
+- A society is billed every month or every quarter (`billing_cycle_months` 1 or 3). A flat's `maintenance_amount` is the amount for one cycle.
+- Billing for a `(society, period)` pair happens **exactly once**, where `period` is the first day of a cycle (any month if monthly; 1 January, April, July or October if quarterly). A unique constraint on BillingRun enforces this, and the job is safe to run twice, every day, or concurrently.
+- A billing run is one transaction: a cycle is fully billed or not billed at all, never half. Flats with `maintenance_amount = 0` are not billed.
 - Each flat gets at most one maintenance charge per period, also backed by a unique constraint.
+- The automatic job never bills a society before its `billing_start` date, so flats can be set up mid-cycle without an early charge.
+- A charge may be paid in any number of installments, but a payment can never exceed what is owed. There is no advance payment or credit.
 
 ## Audit
 - Every money-changing action (payment, reversal, billing run, expense, expense reversal) writes an AuditLog row (actor, society, action, object, amount, timestamp) in the same transaction as the change. If either write fails, both roll back.
@@ -58,3 +61,14 @@ A user can belong to several societies, with one role in each.
 - **Nobody records or reverses a payment for a flat they live in**, whatever their role. Another office-bearer must do it (HTTP 403, nothing written). This also covers housemates who share a flat.
 - **Nobody changes their own role or flat.** Another manager does it.
 - **A society always keeps at least one member who can manage members.** Demoting the last one is refused; the managers are locked in a fixed order so two simultaneous demotions cannot both succeed.
+
+## Platform (super admin)
+- The super admin is a superuser who belongs to no society. They can create a society and its first president's login, list societies (counts and logins only) and reissue a lost president/secretary password. They can never read a society's ledger, balances, expenses or audit log: every society route answers 404, like a stranger.
+- A society's first president is created in the same transaction as the society, with a random one-time password that must be changed at first login.
+
+## Bulk import
+- Only a president or secretary of that society may import. The preview writes nothing.
+- Confirm re-validates every row inside a society-wide lock and creates everything or nothing. Existing flats are never changed by an import.
+- Uploaded files are untrusted: `.csv`/`.xlsx` only, limited in size and rows, formulas never evaluated, nothing stored.
+- Passwords exist in plain text only in the confirm response.
+- Phone and email belong to the Membership (one society) and are shown only to the president and secretary. They are never written to the audit log.

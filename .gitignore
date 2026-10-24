@@ -16,3 +16,7 @@ node_modules/
 celerybeat-schedule*
 frontend/dist/
 *.tsbuildinfo
+
+# Real society data: sheets with names, phones and emails, and database dumps. Never commit.
+data/
+backups/
