@@ -86,8 +86,8 @@ def test_reversal_is_audited_with_what_it_reverses():
 @pytest.mark.django_db
 def test_billing_is_audited_as_a_system_action_and_replays_add_nothing():
     society = build_world(owed=None)[0]
-    Flat.objects.create(society=society, label="A-2", monthly_maintenance=D("1500.00"))
-    Flat.objects.create(society=society, label="A-3", monthly_maintenance=D("500.50"))
+    Flat.objects.create(society=society, label="A-2", maintenance_amount=D("1500.00"))
+    Flat.objects.create(society=society, label="A-3", maintenance_amount=D("500.50"))
 
     run_billing(society=society, period=NOV)
     run_billing(society=society, period=NOV)
@@ -120,7 +120,7 @@ def test_if_the_audit_write_fails_the_payment_is_rolled_back(monkeypatch):
 @pytest.mark.django_db(transaction=True)
 def test_if_the_audit_write_fails_the_whole_billing_month_is_rolled_back(monkeypatch):
     society = build_world(owed=None)[0]
-    Flat.objects.create(society=society, label="A-2", monthly_maintenance=D("1500.00"))
+    Flat.objects.create(society=society, label="A-2", maintenance_amount=D("1500.00"))
 
     def broken(**kwargs):
         raise RuntimeError("audit store down")

@@ -34,6 +34,7 @@ def serialize_me(user):
             {
                 "society_id": m.society_id,
                 "society_name": m.society.name,
+                "billing_cycle_months": m.society.billing_cycle_months,
                 "role": m.role,
                 "flat_id": m.flat_id,
                 "flat_label": m.flat.label if m.flat else None,

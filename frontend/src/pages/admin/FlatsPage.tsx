@@ -19,12 +19,15 @@ import { useFlats, useSaveFlat } from "../../api/hooks";
 import type { Flat } from "../../api/types";
 import { useMembership } from "../../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money } from "../../components/common";
+import { cycleWord } from "../../lib/dates";
 import { isValidAmount, normaliseAmount, toCents } from "../../lib/money";
 
 type Editing = { mode: "new" } | { mode: "edit"; flat: Flat } | null;
 
 export function FlatsPage() {
-  const societyId = useMembership().society_id;
+  const membership = useMembership();
+  const societyId = membership.society_id;
+  const per = cycleWord(membership.billing_cycle_months);
   const flats = useFlats(societyId);
   const [editing, setEditing] = useState<Editing>(null);
 
@@ -40,7 +43,7 @@ export function FlatsPage() {
         </Button>
       </Group>
       <Text size="sm" c="dimmed">
-        The monthly amount is what the billing job charges each flat on the 1st. A flat set to ₹0 is
+        The amount is what billing charges each flat on the 1st of every {per}. A flat set to ₹0 is
         not billed.
       </Text>
 
@@ -54,9 +57,9 @@ export function FlatsPage() {
                 <div>
                   <Text fw={800}>Flat {flat.label}</Text>
                   <Text size="sm" c="dimmed">
-                    {toCents(flat.monthly_maintenance) > 0n ? (
+                    {toCents(flat.maintenance_amount) > 0n ? (
                       <>
-                        <Money value={flat.monthly_maintenance} /> / month
+                        <Money value={flat.maintenance_amount} /> / {per}
                       </>
                     ) : (
                       "Not billed"
@@ -92,6 +95,7 @@ function FlatModal({
   onClose: () => void;
 }) {
   const save = useSaveFlat(societyId);
+  const per = cycleWord(useMembership().billing_cycle_months);
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -99,14 +103,14 @@ function FlatModal({
   useEffect(() => {
     if (editing) {
       setLabel(editing.mode === "edit" ? editing.flat.label : "");
-      setAmount(editing.mode === "edit" ? editing.flat.monthly_maintenance : "0.00");
+      setAmount(editing.mode === "edit" ? editing.flat.maintenance_amount : "0.00");
       setErrors({});
       save.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the modal (re)opens
   }, [editing]);
 
-  const general = generalError(errors, ["label", "monthly_maintenance"]);
+  const general = generalError(errors, ["label", "maintenance_amount"]);
   const amountOk = /^\d+(\.\d{1,2})?$/.test(amount.trim()) && (amount.trim() === "0" || amount.trim() === "0.00" || isValidAmount(amount.trim()));
 
   function submit(event: FormEvent) {
@@ -116,7 +120,7 @@ function FlatModal({
       {
         id: editing.mode === "edit" ? editing.flat.id : undefined,
         label: label.trim(),
-        monthly_maintenance: normaliseAmount(amount.trim()),
+        maintenance_amount: normaliseAmount(amount.trim()),
       },
       {
         onSuccess: () => {
@@ -148,11 +152,11 @@ function FlatModal({
             data-autofocus
           />
           <TextInput
-            label="Monthly maintenance (₹)"
+            label={`Maintenance per ${per} (₹)`}
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.currentTarget.value)}
-            error={errors.monthly_maintenance ?? (amount && !amountOk ? "Enter an amount like 1500 or 1500.50" : undefined)}
+            error={errors.maintenance_amount ?? (amount && !amountOk ? "Enter an amount like 1500 or 1500.50" : undefined)}
             required
           />
           {general && (

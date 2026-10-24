@@ -34,7 +34,7 @@ def client_for(user):
 @pytest.fixture
 def world():
     society = Society.objects.create(name="Green Park", slug="green-park")
-    flat = Flat.objects.create(society=society, label="A-101", monthly_maintenance=D("100.00"))
+    flat = Flat.objects.create(society=society, label="A-101", maintenance_amount=D("100.00"))
     people = {}
     for name, role, own_flat in [
         ("admin", "secretary", None),

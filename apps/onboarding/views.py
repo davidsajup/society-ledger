@@ -38,6 +38,8 @@ def _society_row(society):
         "name": society.name,
         "slug": society.slug,
         "created_at": society.created_at,
+        "billing_cycle_months": society.billing_cycle_months,
+        "billing_start": society.billing_start,
         "flat_count": society.flat_count,
         "member_count": society.member_count,
         "managers": ManagerSerializer(society.managers, many=True).data,

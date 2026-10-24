@@ -10,6 +10,15 @@ class Society(models.Model):
 
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True)
+    # How often maintenance is charged: every month, or once per quarter. Set when the society is
+    # onboarded. A flat's maintenance_amount is the amount for ONE such cycle.
+    billing_cycle_months = models.PositiveSmallIntegerField(
+        choices=[(1, "Monthly"), (3, "Quarterly")], default=1
+    )
+    # The automatic (daily) billing job never bills this society before this date, so setting up
+    # flats and amounts in the middle of a cycle cannot trigger a surprise charge. Null means no
+    # restriction (the behaviour every society had before this field existed).
+    billing_start = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -22,8 +31,9 @@ class Society(models.Model):
 class Flat(models.Model):
     society = models.ForeignKey(Society, on_delete=models.PROTECT, related_name="flats")
     label = models.CharField(max_length=20)  # e.g. "A-101"
-    # What the monthly billing job charges this flat. 0 means "not billed".
-    monthly_maintenance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # What billing charges this flat each cycle (a month or a quarter, per the society). 0 means
+    # "not billed".
+    maintenance_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = TenantQuerySet.as_manager()
@@ -35,7 +45,7 @@ class Flat(models.Model):
                 fields=["society", "label"], name="flat_label_unique_per_society"
             ),
             models.CheckConstraint(
-                condition=Q(monthly_maintenance__gte=0), name="flat_maintenance_not_negative"
+                condition=Q(maintenance_amount__gte=0), name="flat_maintenance_not_negative"
             ),
         ]
 

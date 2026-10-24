@@ -79,7 +79,7 @@ class Command(BaseCommand):
 
         society = Society.objects.create(name=slug.replace("-", " ").title(), slug=slug)
         flats = {
-            label: Flat.objects.create(society=society, label=label, monthly_maintenance=rent)
+            label: Flat.objects.create(society=society, label=label, maintenance_amount=rent)
             for label, rent in FLATS
         }
 

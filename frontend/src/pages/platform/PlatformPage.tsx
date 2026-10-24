@@ -10,6 +10,7 @@ import {
   Menu,
   Modal,
   Paper,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
@@ -34,6 +35,7 @@ import { CardSkeleton, EmptyState, ErrorState } from "../../components/common";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { CredentialsDialog } from "../../components/CredentialsDialog";
 import { ROLE_LABEL } from "../../lib/capabilities";
+import { calendarDay, cycleWord, nextCycleStart } from "../../lib/dates";
 
 const STATUS: Record<Exclude<LoginStatus, "active">, { label: string; color: string }> = {
   temporary: { label: "Not signed in yet", color: "yellow" },
@@ -166,6 +168,10 @@ export function PlatformPage() {
                     {society.flat_count === 1 ? "flat" : "flats"} · {society.member_count}{" "}
                     {society.member_count === 1 ? "person" : "people"}
                   </Text>
+                  <Text size="sm" c="dimmed">
+                    Billed every {society.billing_cycle_months === 3 ? "3 months" : "month"}
+                    {society.billing_start ? `, from ${calendarDay(society.billing_start)}` : ""}
+                  </Text>
                   <Stack gap="xs" mt="sm">
                     {society.managers.map((manager) => {
                       const status =
@@ -256,6 +262,8 @@ function NewSocietyModal({
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [president, setPresident] = useState("");
+  const [cycle, setCycle] = useState<"1" | "3">("3");
+  const [start, setStart] = useState(nextCycleStart(3));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -264,21 +272,35 @@ function NewSocietyModal({
       setSlug("");
       setSlugEdited(false);
       setPresident("");
+      setCycle("3");
+      setStart(nextCycleStart(3));
       setErrors({});
       create.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the modal opens
   }, [opened]);
 
-  const canSubmit = name.trim() !== "" && slug !== "" && president.trim() !== "";
-  const general = generalError(errors, ["name", "slug", "president_name"]);
+  const canSubmit = name.trim() !== "" && slug !== "" && president.trim() !== "" && start !== "";
+  const general = generalError(errors, [
+    "name",
+    "slug",
+    "president_name",
+    "billing_cycle_months",
+    "billing_start",
+  ]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
     setErrors({});
     create.mutate(
-      { name: name.trim(), slug, president_name: president.trim() },
+      {
+        name: name.trim(),
+        slug,
+        president_name: president.trim(),
+        billing_cycle_months: Number(cycle),
+        billing_start: start,
+      },
       {
         onSuccess: (created) => onCreated(created, created.president_name || president.trim()),
         onError: (error) => setErrors(formErrors(error, "Could not create the society.")),
@@ -322,6 +344,32 @@ function NewSocietyModal({
             value={president}
             onChange={(e) => setPresident(e.currentTarget.value)}
             error={errors.president_name}
+            required
+          />
+          <div>
+            <Text size="sm" fw={500} mb={4}>
+              Maintenance is billed every
+            </Text>
+            <SegmentedControl
+              fullWidth
+              value={cycle}
+              onChange={(v) => {
+                setCycle(v as "1" | "3");
+                setStart(nextCycleStart(Number(v)));
+              }}
+              data={[
+                { value: "3", label: "3 months" },
+                { value: "1", label: "Month" },
+              ]}
+            />
+          </div>
+          <TextInput
+            label="Automatic billing starts on"
+            description={`The first day of a ${cycleWord(Number(cycle))}. Nothing is billed before this date, so flats can be set up first.`}
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.currentTarget.value)}
+            error={errors.billing_start}
             required
           />
           {general && (

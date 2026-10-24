@@ -9,6 +9,9 @@ class CreateSocietySerializer(serializers.Serializer):
     name = serializers.CharField(max_length=120)
     slug = serializers.SlugField(max_length=50)
     president_name = serializers.CharField(max_length=100)
+    billing_cycle_months = serializers.ChoiceField(choices=[1, 3], default=1)
+    # Required: new societies must say when automatic billing may begin (see Society.billing_start).
+    billing_start = serializers.DateField()
 
 
 class ManagerSerializer(serializers.Serializer):

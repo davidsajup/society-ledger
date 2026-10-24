@@ -36,6 +36,7 @@ def test_login_returns_identity_and_memberships(admin_user, society):
         {
             "society_id": society.id,
             "society_name": "Green Park",
+            "billing_cycle_months": 1,
             "role": "secretary",
             "flat_id": None,
             "flat_label": None,

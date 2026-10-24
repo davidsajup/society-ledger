@@ -22,8 +22,8 @@ NOV = date(2026, 11, 1)
 def two_societies():
     green = Society.objects.create(name="Green Park", slug="green-park")
     lake = Society.objects.create(name="Lake View", slug="lake-view")
-    g = Flat.objects.create(society=green, label="A-1", monthly_maintenance=D("1500.00"))
-    l = Flat.objects.create(society=lake, label="B-1", monthly_maintenance=D("700.00"))  # noqa: E741
+    g = Flat.objects.create(society=green, label="A-1", maintenance_amount=D("1500.00"))
+    l = Flat.objects.create(society=lake, label="B-1", maintenance_amount=D("700.00"))  # noqa: E741
     return green, lake, g, l
 
 
@@ -55,7 +55,7 @@ def test_daily_fan_out_bills_every_society_once_even_when_it_fires_every_day(
     two_societies, monkeypatch
 ):
     green, lake, g, l = two_societies  # noqa: E741
-    monkeypatch.setattr("apps.billing.tasks.current_period", lambda: NOV)
+    monkeypatch.setattr("apps.billing.tasks.current_period", lambda today=None, cycle_months=1: NOV)
 
     assert bill_all_societies.delay().get() == 2
     bill_all_societies.delay().get()  # the next day's tick
@@ -70,7 +70,7 @@ def test_daily_fan_out_bills_every_society_once_even_when_it_fires_every_day(
 def test_a_missed_first_of_month_is_caught_up_by_a_later_tick(two_societies, monkeypatch):
     """Scheduler was down on the 1st. The tick on the 3rd bills the month, exactly once."""
     _, _, g, _ = two_societies
-    monkeypatch.setattr("apps.billing.tasks.current_period", lambda: NOV)
+    monkeypatch.setattr("apps.billing.tasks.current_period", lambda today=None, cycle_months=1: NOV)
 
     bill_all_societies.delay().get()
 

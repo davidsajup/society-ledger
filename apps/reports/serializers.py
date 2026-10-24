@@ -68,6 +68,7 @@ class DuesSummarySerializer(serializers.Serializer):
 
 
 class DuesSerializer(serializers.Serializer):
+    cycle_months = serializers.IntegerField()
     periods = serializers.ListField(child=serializers.DateField())
     flats = DuesFlatSerializer(many=True)
     summary = DuesSummarySerializer()

@@ -253,7 +253,7 @@ export function useReverseExpense(societyId: number) {
 export function useSaveFlat(societyId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (v: { id?: number; label: string; monthly_maintenance: string }) => {
+    mutationFn: (v: { id?: number; label: string; maintenance_amount: string }) => {
       const { id, ...body } = v;
       return id === undefined
         ? api<Flat>(`${base(societyId)}/flats/`, { method: "POST", body })
@@ -331,7 +331,13 @@ export function usePlatformSocieties() {
 export function useCreateSociety() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (v: { name: string; slug: string; president_name: string }) =>
+    mutationFn: (v: {
+      name: string;
+      slug: string;
+      president_name: string;
+      billing_cycle_months: number;
+      billing_start: string;
+    }) =>
       api<CreatedSociety>("/platform/societies/", { method: "POST", body: v }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.platformSocieties }),
   });

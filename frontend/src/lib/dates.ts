@@ -16,6 +16,36 @@ export const monthShortLabel = (iso: string) => monthShort.format(local(iso));
 export const monthLabel = (iso: string) => monthLong.format(local(iso));
 export const calendarDay = (iso: string) => day.format(local(iso));
 
+/** The last month of a cycle that starts at `iso` ("2026-10-01" + 3 months -> December 2026). */
+const cycleEnd = (iso: string, cycleMonths: number) => {
+  const start = local(iso);
+  return new Date(start.getFullYear(), start.getMonth() + cycleMonths - 1, 1);
+};
+
+/** "October 2026" for a monthly cycle; "Oct–Dec 2026" for a quarterly one. */
+export const cycleLabel = (iso: string, cycleMonths: number) =>
+  cycleMonths <= 1
+    ? monthLabel(iso)
+    : `${monthShort.format(local(iso))}–${monthShort.format(cycleEnd(iso, cycleMonths))} ${local(iso).getFullYear()}`;
+
+/** A compact column heading: "Oct" monthly, "Oct–Dec" quarterly. */
+export const cycleShortLabel = (iso: string, cycleMonths: number) =>
+  cycleMonths <= 1
+    ? monthShort.format(local(iso))
+    : `${monthShort.format(local(iso))}–${monthShort.format(cycleEnd(iso, cycleMonths))}`;
+
+/** The word for one cycle: "month" or "quarter". */
+export const cycleWord = (cycleMonths: number) => (cycleMonths === 3 ? "quarter" : "month");
+
+/** The first day of the next cycle after today, as "YYYY-MM-DD": a sensible billing start. */
+export function nextCycleStart(cycleMonths: number, today = new Date()): string {
+  const index = today.getFullYear() * 12 + today.getMonth();
+  const next = (Math.floor(index / cycleMonths) + 1) * cycleMonths;
+  const year = Math.floor(next / 12);
+  const month = (next % 12) + 1;
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
 /** Moment-in-time helpers (ISO timestamps from the API). */
 export const timeLabel = (iso: string) => time.format(new Date(iso));
 export const dayHeading = (iso: string) => weekday.format(new Date(iso));

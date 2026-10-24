@@ -10,6 +10,7 @@ What these tests prove
   apps/societies/tests/test_cross_tenant.py.
 """
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -34,7 +35,15 @@ pytestmark = pytest.mark.django_db
 
 User = get_user_model()
 
-NEW_SOCIETY = {"name": "Green Meadows", "slug": "green-meadows", "president_name": "Vikram Rao"}
+# Automatic billing may begin at the start of next year: always in the future, a cycle start.
+BILLING_START = date(date.today().year + 1, 1, 1)
+NEW_SOCIETY = {
+    "name": "Green Meadows",
+    "slug": "green-meadows",
+    "president_name": "Vikram Rao",
+    "billing_cycle_months": 3,
+    "billing_start": BILLING_START,
+}
 
 # Every platform route. The guard test fails if a route is added without being listed here.
 ROUTES = {
@@ -219,7 +228,7 @@ def test_the_service_refuses_anyone_who_is_not_an_active_super_admin():
 
 def test_the_list_shows_counts_and_logins_but_no_money(super_admin, onboarded):
     society = onboarded["society"]
-    flat = Flat.objects.create(society=society, label="A-1", monthly_maintenance=Decimal("1500"))
+    flat = Flat.objects.create(society=society, label="A-1", maintenance_amount=Decimal("1500"))
     record_charge(society=society, flat=flat, amount=Decimal("1500.00"))
     add_member(
         society=society,

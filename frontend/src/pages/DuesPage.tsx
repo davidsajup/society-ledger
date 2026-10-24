@@ -19,7 +19,7 @@ import { useDues } from "../api/hooks";
 import type { DuesCell, DuesFlat, DuesStatus } from "../api/types";
 import { useMembership } from "../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money } from "../components/common";
-import { monthLabel, monthShortLabel } from "../lib/dates";
+import { cycleLabel, cycleShortLabel, cycleWord } from "../lib/dates";
 import { compareMoney, formatInr, toCents } from "../lib/money";
 
 const STYLE: Record<DuesStatus, { bg: string; fg: string; word: string }> = {
@@ -29,19 +29,19 @@ const STYLE: Record<DuesStatus, { bg: string; fg: string; word: string }> = {
   none: { bg: "transparent", fg: "var(--mantine-color-dimmed)", word: "Not billed" },
 };
 
-/** One month for one flat: colour AND a word/figure, so it never relies on colour alone. */
-function Chip({ cell }: { cell: DuesCell }) {
+/** One billing cycle for one flat: colour AND a word/figure, so it never relies on colour alone. */
+function Chip({ cell, cycle }: { cell: DuesCell; cycle: number }) {
   const s = STYLE[cell.status];
   return (
     <Box
-      title={`${monthLabel(cell.period)} · ${s.word}${cell.status === "none" ? "" : ` · due ${formatInr(cell.due)}`}`}
+      title={`${cycleLabel(cell.period, cycle)} · ${s.word}${cell.status === "none" ? "" : ` · due ${formatInr(cell.due)}`}`}
       style={{ background: s.bg, color: s.fg, borderRadius: "var(--mantine-radius-md)", minWidth: 62 }}
       px={8}
       py={5}
       ta="center"
     >
       <Text size="xs" fw={700} inherit>
-        {monthShortLabel(cell.period)}
+        {cycleShortLabel(cell.period, cycle)}
       </Text>
       <Text size="xs" inherit className="money">
         {cell.status === "paid" ? <IconCheck size={13} style={{ verticalAlign: "-2px" }} /> : cell.status === "none" ? "—" : formatInr(cell.due, true)}
@@ -65,7 +65,7 @@ export function DuesPage() {
   if (dues.isPending) return <CardSkeleton rows={5} />;
   if (dues.isError) return <ErrorState error={dues.error} onRetry={() => dues.refetch()} />;
 
-  const { periods, summary } = dues.data;
+  const { periods, summary, cycle_months: cycle } = dues.data;
   const statement = (flat: DuesFlat) => `/s/${societyId}/flat/${flat.id}/statement`;
 
   return (
@@ -73,12 +73,12 @@ export function DuesPage() {
       <Card>
         <Group justify="space-between" align="flex-start" wrap="wrap">
           <div>
-            <Title order={3}>Dues by month</Title>
+            <Title order={3}>Dues by {cycleWord(cycle)}</Title>
             <Text c="dimmed" size="sm">
               {summary.flats_with_dues === 0
                 ? `All ${summary.flats} flats are paid up.`
                 : `${summary.flats_with_dues} of ${summary.flats} flats have dues` +
-                  (summary.oldest_unpaid ? ` · oldest unpaid: ${monthLabel(summary.oldest_unpaid)}` : "")}
+                  (summary.oldest_unpaid ? ` · oldest unpaid: ${cycleLabel(summary.oldest_unpaid, cycle)}` : "")}
             </Text>
           </div>
           <SegmentedControl
@@ -97,12 +97,14 @@ export function DuesPage() {
       </Card>
 
       {periods.length === 0 ? (
-        <EmptyState title="Nothing billed yet">Monthly dues appear here after the first billing run.</EmptyState>
+        <EmptyState title="Nothing billed yet">
+          Dues appear here after the first billing run.
+        </EmptyState>
       ) : flats.length === 0 ? (
         <EmptyState title="No flats with dues">Everyone is paid up. Switch to All flats to see the grid.</EmptyState>
       ) : (
         <>
-          {/* Wide screens: flats down the side, months across. */}
+          {/* Wide screens: flats down the side, billing cycles across. */}
           <Card padding={0} visibleFrom="md">
             <ScrollArea>
               <Table verticalSpacing="xs" horizontalSpacing="md" highlightOnHover>
@@ -111,7 +113,7 @@ export function DuesPage() {
                     <Table.Th>Flat</Table.Th>
                     {periods.map((p) => (
                       <Table.Th key={p} ta="center">
-                        {monthShortLabel(p)} {p.slice(2, 4)}
+                        {cycleShortLabel(p, cycle)} {p.slice(2, 4)}
                       </Table.Th>
                     ))}
                     <Table.Th ta="right">Owes</Table.Th>
@@ -127,7 +129,7 @@ export function DuesPage() {
                       </Table.Td>
                       {flat.cells.map((cell) => (
                         <Table.Td key={cell.period}>
-                          <Chip cell={cell} />
+                          <Chip cell={cell} cycle={cycle} />
                         </Table.Td>
                       ))}
                       <Table.Td ta="right" fw={800}>
@@ -140,7 +142,7 @@ export function DuesPage() {
             </ScrollArea>
           </Card>
 
-          {/* Phones and tablets: one card per flat with its months as chips. */}
+          {/* Phones and tablets: one card per flat with its billing cycles as chips. */}
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm" hiddenFrom="md">
             {flats.map((flat) => (
               <Card key={flat.id} padding="md">
@@ -162,7 +164,7 @@ export function DuesPage() {
                 </Group>
                 <Group gap={6}>
                   {flat.cells.map((cell) => (
-                    <Chip key={cell.period} cell={cell} />
+                    <Chip key={cell.period} cell={cell} cycle={cycle} />
                   ))}
                 </Group>
               </Card>

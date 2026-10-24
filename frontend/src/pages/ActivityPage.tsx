@@ -15,7 +15,7 @@ import { useAudit, useBillingRuns, useFlats } from "../api/hooks";
 import type { AuditRow } from "../api/types";
 import { useMembership } from "../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money, formatDate } from "../components/common";
-import { dayHeading, dayKey, monthLabel, timeLabel } from "../lib/dates";
+import { cycleLabel, cycleWord, dayHeading, dayKey, timeLabel } from "../lib/dates";
 
 type Filter = "all" | "payments" | "expenses" | "billing" | "people";
 
@@ -50,7 +50,11 @@ const lookOf = (action: string) =>
 const groupOf = (action: string) =>
   (GROUP as Record<string, Exclude<Filter, "all"> | undefined>)[action];
 
-function describe(row: AuditRow, flatLabel: (id: number | null) => string): string {
+function describe(
+  row: AuditRow,
+  flatLabel: (id: number | null) => string,
+  cycle: number,
+): string {
   const who = row.actor === "system" ? "System" : row.actor;
   switch (row.action) {
     case "payment.recorded":
@@ -61,7 +65,7 @@ function describe(row: AuditRow, flatLabel: (id: number | null) => string): stri
         : `${who} cancelled a charge · Flat ${flatLabel(row.flat)}`;
     case "billing.run": {
       const flats = Number(row.data.flats_charged ?? 0);
-      return `${who} billed ${flats} flat${flats === 1 ? "" : "s"} for ${monthLabel(`${row.data.period}-01`)}`;
+      return `${who} billed ${flats} flat${flats === 1 ? "" : "s"} for ${cycleLabel(`${row.data.period}-01`, cycle)}`;
     }
     case "expense.recorded":
       return `${who} recorded an expense · ${String(row.data.category ?? "other")}`;
@@ -88,7 +92,9 @@ function describe(row: AuditRow, flatLabel: (id: number | null) => string): stri
 }
 
 export function ActivityPage() {
-  const societyId = useMembership().society_id;
+  const membership = useMembership();
+  const societyId = membership.society_id;
+  const cycle = membership.billing_cycle_months;
   const audit = useAudit(societyId);
   const runs = useBillingRuns(societyId);
   const flats = useFlats(societyId);
@@ -110,14 +116,14 @@ export function ActivityPage() {
   return (
     <Stack gap="lg">
       <Stack gap="xs">
-        <Title order={3}>Monthly billing</Title>
+        <Title order={3}>{cycle === 3 ? "Quarterly" : "Monthly"} billing</Title>
         {runs.isPending ? (
           <CardSkeleton rows={1} />
         ) : runs.isError ? (
           <ErrorState error={runs.error} onRetry={() => runs.refetch()} />
         ) : runs.data.length === 0 ? (
           <EmptyState title="No billing run yet">
-            Dues are generated automatically for every flat on the 1st of each month.
+            Dues are generated automatically for every flat on the 1st of each {cycleWord(cycle)}.
           </EmptyState>
         ) : (
           runs.data.slice(0, 3).map((run) => (
@@ -128,7 +134,7 @@ export function ActivityPage() {
                     <IconCalendarDollar size={18} />
                   </ThemeIcon>
                   <div>
-                    <Text fw={800}>{monthLabel(run.period)}</Text>
+                    <Text fw={800}>{cycleLabel(run.period, cycle)}</Text>
                     <Text size="xs" c="dimmed">
                       Generated {formatDate(run.created_at)} · {run.flats_charged} flats billed
                     </Text>
@@ -140,7 +146,7 @@ export function ActivityPage() {
           ))
         )}
         <Text size="xs" c="dimmed">
-          Each month is billed exactly once, even if the job runs twice.
+          Each {cycleWord(cycle)} is billed exactly once, even if the job runs twice.
         </Text>
       </Stack>
 
@@ -194,7 +200,7 @@ export function ActivityPage() {
                         </ThemeIcon>
                         <div style={{ minWidth: 0 }}>
                           <Text fw={600} size="sm">
-                            {describe(row, flatLabel)}
+                            {describe(row, flatLabel, cycle)}
                           </Text>
                           <Group gap={6}>
                             <Text size="xs" c="dimmed">

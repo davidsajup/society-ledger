@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.credentials import make_username, set_temporary_password
 from apps.audit import services as audit
 from apps.audit.models import AuditLog
+from apps.billing.services import is_cycle_start
 
 from . import roles
 from .models import Membership, Society
@@ -187,12 +189,16 @@ class NotPlatformAdmin(Exception):
 
 
 @transaction.atomic
-def create_society(*, actor, name, slug, president_name):
+def create_society(
+    *, actor, name, slug, president_name, billing_cycle_months=1, billing_start=None
+):
     """Onboard a society: the society itself and its first president's login. Nothing else.
 
     Returns (society, president_membership, temporary_password). The super admin hands the
     login to the president, who then creates flats and every other account. The president has
     no flat yet (the society has none) and can be given one later by another office-bearer.
+    `billing_start` is the first day automatic billing may run (a cycle start, not in the past).
+    It stops flats set up mid-cycle from being charged early. None means no restriction.
     One transaction: if the president's login fails, no empty society is left behind.
     The password exists in plain text only here and in the one response that carries it.
     """
@@ -200,8 +206,25 @@ def create_society(*, actor, name, slug, president_name):
     if not (actor.is_superuser and actor.is_active):
         raise NotPlatformAdmin("Only the super admin can create a society.")
 
-    society = Society(name=name.strip(), slug=slug.strip())
+    society = Society(
+        name=name.strip(),
+        slug=slug.strip(),
+        billing_cycle_months=billing_cycle_months,
+        billing_start=billing_start,
+    )
     society.full_clean(exclude=["created_at"])  # slug format and uniqueness, errors per field
+    if billing_start is not None:
+        if not is_cycle_start(billing_start, billing_cycle_months):
+            raise ValidationError(
+                {
+                    "billing_start": "Billing must start on the first day of a cycle "
+                    "(the 1st of January, April, July or October for quarterly billing)."
+                }
+            )
+        if billing_start < timezone.localdate():
+            raise ValidationError(
+                {"billing_start": "The billing start date cannot be in the past."}
+            )
     society.save()
     audit.record(
         society=society,

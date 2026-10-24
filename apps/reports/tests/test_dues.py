@@ -31,8 +31,8 @@ def client_for(user):
 @pytest.fixture
 def world():
     society = Society.objects.create(name="Green Park", slug="green-park")
-    flat = Flat.objects.create(society=society, label="A-1", monthly_maintenance=D("1500.00"))
-    other = Flat.objects.create(society=society, label="B-1", monthly_maintenance=D("1000.00"))
+    flat = Flat.objects.create(society=society, label="A-1", maintenance_amount=D("1500.00"))
+    other = Flat.objects.create(society=society, label="B-1", maintenance_amount=D("1000.00"))
     quiet = Flat.objects.create(society=society, label="C-1")  # not billed
     people = {}
     for name, role, own in [("admin", "secretary", None), ("treasurer", "treasurer", None),
@@ -202,7 +202,7 @@ def test_old_months_outside_the_window_are_still_paid_first_and_still_counted(wo
 
 def test_another_societys_money_never_appears(world):
     other = Society.objects.create(name="Lake View", slug="lake-view")
-    foreign = Flat.objects.create(society=other, label="X-1", monthly_maintenance=D("9999.00"))
+    foreign = Flat.objects.create(society=other, label="X-1", maintenance_amount=D("9999.00"))
     run_billing(society=other, period=AUG)
     bill(world, SEP)
 
@@ -224,7 +224,7 @@ def test_dues_grid_uses_a_constant_number_of_queries(world):
     baseline = count()
     for i in range(6):
         Flat.objects.create(
-            society=world["society"], label=f"N-{i}", monthly_maintenance=D("10.00")
+            society=world["society"], label=f"N-{i}", maintenance_amount=D("10.00")
         )
     bill(world, SEP, OCT)
 
@@ -282,7 +282,7 @@ def test_billing_runs_are_listed_newest_month_first_with_exact_totals(world):
 
 def test_billing_runs_only_list_this_societys_runs(world):
     other = Society.objects.create(name="Lake View", slug="lake-view")
-    Flat.objects.create(society=other, label="X-1", monthly_maintenance=D("700.00"))
+    Flat.objects.create(society=other, label="X-1", maintenance_amount=D("700.00"))
     run_billing(society=other, period=AUG)
 
     runs = client_for(world["people"]["admin"]).get(

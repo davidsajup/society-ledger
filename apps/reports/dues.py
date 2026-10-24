@@ -102,6 +102,7 @@ def dues_grid(society, max_periods: int = 12):
         )
 
     return {
+        "cycle_months": society.billing_cycle_months,
         "periods": shown,
         "flats": rows,
         "summary": {

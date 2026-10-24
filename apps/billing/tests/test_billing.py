@@ -21,7 +21,7 @@ DEC = date(2026, 12, 1)
 def make_society(slug="green-park", amounts=("1500.00", "2000.50", "0.00")):
     society = Society.objects.create(name=slug, slug=slug)
     flats = [
-        Flat.objects.create(society=society, label=f"A-{i}", monthly_maintenance=D(a))
+        Flat.objects.create(society=society, label=f"A-{i}", maintenance_amount=D(a))
         for i, a in enumerate(amounts, start=101)
     ]
     return society, flats
@@ -91,7 +91,7 @@ def test_a_new_month_is_billed_separately():
 def test_a_flat_added_after_the_run_is_not_billed_until_next_month():
     society, _ = make_society()
     run_billing(society=society, period=NOV)
-    latecomer = Flat.objects.create(society=society, label="Z-9", monthly_maintenance=D("999.00"))
+    latecomer = Flat.objects.create(society=society, label="Z-9", maintenance_amount=D("999.00"))
 
     run_billing(society=society, period=NOV)  # re-run of an already-billed month
 
@@ -224,7 +224,7 @@ def test_database_rejects_negative_maintenance():
     society, _ = make_society()
 
     with pytest.raises(IntegrityError), transaction.atomic():
-        Flat.objects.create(society=society, label="N-1", monthly_maintenance=D("-1.00"))
+        Flat.objects.create(society=society, label="N-1", maintenance_amount=D("-1.00"))
 
 
 def test_current_period_is_the_first_of_the_month():

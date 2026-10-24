@@ -30,16 +30,24 @@ const MONTHS = [
 
 /** "Maintenance due, October 2026" when the note names the month; otherwise the plain title. */
 export function entryHeading(entry: LedgerEntry, look: EntryLook): string {
-  const month = entry.note.match(/\b(\d{4})-(0[1-9]|1[0-2])\b/);
-  if (entry.reverses === null && entry.kind === "charge" && month) {
-    return `${look.title}, ${MONTHS[Number(month[2]) - 1]} ${month[1]}`;
+  if (entry.reverses === null && entry.kind === "charge") {
+    const cycle = friendlyNote(entry.note);
+    if (cycle !== entry.note) {
+      const named = cycle.replace(/^Maintenance\s*/, "");
+      return named ? `${look.title}, ${named}` : look.title;
+    }
   }
   return look.title;
 }
 
 /** Notes are written by the server ("Maintenance 2026-10"); show the month the way people say it. */
 export function friendlyNote(note: string): string {
-  return note.replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year: string, month: string) => {
-    return `${MONTHS[Number(month) - 1]} ${year}`;
-  });
+  return note
+    .replace(/\b(\d{4})-Q([1-4])\b/g, (_, year: string, quarter: string) => {
+      const first = (Number(quarter) - 1) * 3;
+      return `${MONTHS[first].slice(0, 3)}\u2013${MONTHS[first + 2].slice(0, 3)} ${year}`;
+    })
+    .replace(/\b(\d{4})-(0[1-9]|1[0-2])\b/g, (_, year: string, month: string) => {
+      return `${MONTHS[Number(month) - 1]} ${year}`;
+    });
 }

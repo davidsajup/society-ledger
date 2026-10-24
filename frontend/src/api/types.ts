@@ -5,6 +5,7 @@ export type Role = "president" | "secretary" | "treasurer" | "resident";
 export interface Membership {
   society_id: number;
   society_name: string;
+  billing_cycle_months: number; // 1 = billed monthly, 3 = quarterly
   role: Role;
   flat_id: number | null;
   flat_label: string | null;
@@ -88,7 +89,7 @@ export interface ExpenseList {
 export interface Flat {
   id: number;
   label: string;
-  monthly_maintenance: string;
+  maintenance_amount: string; // per billing cycle (a month or a quarter)
 }
 
 export type LoginStatus = "active" | "temporary" | "expired";
@@ -116,6 +117,8 @@ export interface PlatformSociety {
   name: string;
   slug: string;
   created_at: string;
+  billing_cycle_months: number;
+  billing_start: string | null;
   flat_count: number;
   member_count: number;
   managers: PlatformManager[];
@@ -180,6 +183,7 @@ export interface DuesFlat {
 }
 
 export interface Dues {
+  cycle_months: number;
   periods: string[];
   flats: DuesFlat[];
   summary: { flats: number; flats_with_dues: number; oldest_unpaid: string | null };
