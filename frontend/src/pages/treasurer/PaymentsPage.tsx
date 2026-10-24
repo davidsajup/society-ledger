@@ -9,6 +9,7 @@ import type { RecentPayment } from "../../api/types";
 import { useMembership } from "../../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money, formatDate } from "../../components/common";
 import { ConfirmModal } from "../../components/ConfirmModal";
+import { friendlyNote } from "../../components/entries";
 
 export function PaymentsPage() {
   const membership = useMembership();
@@ -53,19 +54,19 @@ export function PaymentsPage() {
                 <Group gap="xs">
                   <Text fw={800}>Flat {payment.flat_label}</Text>
                   {payment.is_reversal && (
-                    <Badge variant="light" color="gray" size="sm">
+                    <Badge variant="light" color="gray">
                       Charge cancelled
                     </Badge>
                   )}
                   {payment.reversed && (
-                    <Badge variant="light" color="orange" size="sm">
+                    <Badge variant="light" color="orange">
                       Reversed
                     </Badge>
                   )}
                 </Group>
                 <Text size="xs" c="dimmed">
                   {formatDate(payment.created_at)} · by {payment.recorded_by}
-                  {payment.note ? ` · ${payment.note}` : ""}
+                  {payment.note ? ` · ${friendlyNote(payment.note)}` : ""}
                 </Text>
               </div>
               <Stack gap={4} align="flex-end">
@@ -73,7 +74,7 @@ export function PaymentsPage() {
                   value={payment.amount}
                   fw={800}
                   td={payment.reversed ? "line-through" : undefined}
-                  c={payment.reversed ? "dimmed" : "teal.7"}
+                  c={payment.reversed ? "dimmed" : "var(--text-positive)"}
                 />
                 {!payment.reversed && !payment.is_reversal && payment.flat_id === membership.flat_id && (
                   <Text size="xs" c="dimmed">
@@ -82,7 +83,7 @@ export function PaymentsPage() {
                 )}
                 {!payment.reversed && !payment.is_reversal && payment.flat_id !== membership.flat_id && (
                   <Button
-                    size="compact-xs"
+                    h={44}
                     variant="subtle"
                     color="red"
                     leftSection={<IconArrowBackUp size={14} />}

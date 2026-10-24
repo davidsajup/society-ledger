@@ -135,8 +135,8 @@ export function AppLayout() {
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                size="lg"
-                aria-label="Toggle dark mode"
+                size={44}
+                aria-label="Switch between light and dark"
                 onClick={() => setColorScheme(scheme === "dark" ? "light" : "dark")}
               >
                 {scheme === "dark" ? <IconSun size={20} /> : <IconMoon size={20} />}
@@ -144,7 +144,7 @@ export function AppLayout() {
 
               <Menu position="bottom-end" width={220}>
                 <Menu.Target>
-                  <UnstyledButton aria-label="Account menu">
+                  <UnstyledButton aria-label="Account menu" h={44} w={44} style={{ display: "grid", placeItems: "center" }}>
                     <Avatar color="sunrise" radius="xl" size="md">
                       {me.username.slice(0, 1).toUpperCase()}
                     </Avatar>
@@ -190,7 +190,8 @@ export function AppLayout() {
 
       <DemoBanner />
 
-      <Container size="md" py="lg" className="page">
+      {/* Top padding only: the bottom padding comes from .page, which clears the phone bottom nav. */}
+      <Container size="md" pt="lg" className="page">
         <ErrorBoundary resetKey={location.pathname}>
           <Outlet />
         </ErrorBoundary>
@@ -205,11 +206,11 @@ export function AppLayout() {
                   <Box
                     py={8}
                     ta="center"
-                    c={isActive ? "sunrise.7" : "dimmed"}
+                    c={isActive ? "var(--text-owing)" : "dimmed"}
                     style={{ fontWeight: isActive ? 800 : 600 }}
                   >
                     <Icon size={22} stroke={isActive ? 2.2 : 1.7} />
-                    <Text size="xs" inherit fz={11}>
+                    <Text size="xs" inherit fz={13}>
                       {label}
                     </Text>
                   </Box>

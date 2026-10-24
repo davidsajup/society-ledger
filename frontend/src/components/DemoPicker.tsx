@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useDemo, useDemoLogin } from "../api/hooks";
 import type { DemoAccount, Role } from "../api/types";
+import { homePath } from "../auth/session";
 
 export const capitalise = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
@@ -83,7 +84,14 @@ export function DemoPicker() {
                 </ThemeIcon>
               }
               onClick={() =>
-                login.mutate(account.username, { onSuccess: () => navigate("/", { replace: true }) })
+                login.mutate(account.username, {
+                  // Demo logins may belong to other societies too; go straight into the one named above.
+                  onSuccess: (me) => {
+                    const demoSociety = demo.data.accounts[0].society_name;
+                    const here = me.memberships.find((m) => m.society_name === demoSociety);
+                    navigate(here ? homePath(here) : "/", { replace: true });
+                  },
+                })
               }
             >
               <div style={{ textAlign: "left", whiteSpace: "normal" }}>

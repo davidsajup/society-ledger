@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 
 import { useLedger } from "../api/hooks";
 import { CardSkeleton, EmptyState, ErrorState, Money, formatDate } from "../components/common";
-import { describeEntry } from "../components/entries";
+import { describeEntry, entryHeading, friendlyNote } from "../components/entries";
 import { toCents } from "../lib/money";
 import { buildStatement, receiptNumber } from "../lib/statement";
 import { useStatementTarget } from "../lib/useStatementTarget";
@@ -48,7 +48,7 @@ export function StatementPage() {
         ) : (
           <span />
         )}
-        <Button variant="light" leftSection={<IconPrinter size={16} />} onClick={() => window.print()}>
+        <Button variant="light" h={44} leftSection={<IconPrinter size={16} />} onClick={() => window.print()}>
           Print
         </Button>
       </Group>
@@ -63,7 +63,7 @@ export function StatementPage() {
             <Text size="sm" c="dimmed">
               {owes ? "Balance due" : "Account settled"}
             </Text>
-            <Text className="money" fz={30} fw={800} c={owes ? "sunrise.8" : "teal.7"}>
+            <Text className="money" fz={30} fw={800} c={owes ? "var(--text-owing)" : "var(--text-positive)"}>
               <Money value={outstanding} inherit />
             </Text>
           </div>
@@ -100,30 +100,30 @@ export function StatementPage() {
                       <Table.Td>
                         <Group gap={6}>
                           <Text fw={600} size="sm">
-                            {look.title}
+                            {entryHeading(entry, look)}
                           </Text>
                           {reversed && (
-                            <Badge size="xs" color="orange" variant="light">
+                            <Badge color="orange" variant="light">
                               Reversed
                             </Badge>
                           )}
                         </Group>
                         <Text size="xs" c="dimmed">
-                          {entry.note || "—"} · by {entry.recorded_by}
+                          {entry.note ? friendlyNote(entry.note) : "—"} · by {entry.recorded_by}
                         </Text>
                       </Table.Td>
                       <Table.Td ta="right" className="money">
                         {charge ? <Money value={entry.amount} /> : ""}
                       </Table.Td>
                       <Table.Td ta="right" className="money">
-                        {charge ? "" : <Money value={entry.amount} c="teal.7" />}
+                        {charge ? "" : <Money value={entry.amount} c="var(--text-positive)" />}
                       </Table.Td>
                       <Table.Td ta="right" fw={700}>
                         <Money value={balanceAfter} />
                       </Table.Td>
                       <Table.Td ta="right" className="no-print">
                         {isReceiptable && (
-                          <Button component={Link} to={target.receiptPath(entry.id)} size="compact-xs" variant="subtle" leftSection={<IconReceipt2 size={14} />}>
+                          <Button component={Link} to={target.receiptPath(entry.id)} h={44} variant="subtle" leftSection={<IconReceipt2 size={14} />}>
                             Receipt
                           </Button>
                         )}
@@ -147,17 +147,14 @@ export function StatementPage() {
                         <look.icon size={18} />
                       </ThemeIcon>
                       <div style={{ minWidth: 0 }}>
-                        <Text fw={700} truncate>
-                          {look.title}
-                        </Text>
-                        <Text size="xs" c="dimmed" truncate>
+                        <Text fw={700}>{entryHeading(entry, look)}</Text>
+                        <Text size="xs" c="dimmed">
                           {formatDate(entry.created_at)}
-                          {entry.note ? ` · ${entry.note}` : ""}
+                          {entry.note ? ` · ${friendlyNote(entry.note)}` : ""}
                         </Text>
                       </div>
                     </Group>
-                    <Text fw={800} className="money" c={look.sign === "−" ? "teal.7" : undefined}>
-                      {look.sign}
+                    <Text fw={800} className="money" c={look.sign === "−" ? "var(--text-positive)" : undefined}>
                       <Money value={entry.amount} />
                     </Text>
                   </Group>
@@ -167,13 +164,13 @@ export function StatementPage() {
                         Balance after: <Money value={balanceAfter} fw={700} />
                       </Text>
                       {reversed && (
-                        <Badge size="xs" color="orange" variant="light">
+                        <Badge color="orange" variant="light">
                           Reversed
                         </Badge>
                       )}
                     </Group>
                     {isReceiptable && (
-                      <Button component={Link} to={target.receiptPath(entry.id)} size="compact-xs" variant="light" leftSection={<IconReceipt2 size={14} />} className="no-print">
+                      <Button component={Link} to={target.receiptPath(entry.id)} h={44} variant="light" leftSection={<IconReceipt2 size={14} />} className="no-print">
                         {receiptNumber(entry.id)}
                       </Button>
                     )}

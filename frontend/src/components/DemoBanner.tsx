@@ -9,7 +9,7 @@ import { capitalise } from "./DemoPicker";
 
 const TRY: Record<Role, string> = {
   treasurer:
-    "Record a payment for another flat. Your own flat's payments are recorded by someone else, by design.",
+    "Record a payment for another flat. Someone else records the payments for your own flat.",
   president: "Open People to create a login or change a role, or record the treasurer's payment.",
   secretary: "Open People to create a login or change a role, or record the treasurer's payment.",
   resident: "Open Statement and tap a receipt to see it printed.",
@@ -31,20 +31,23 @@ export function DemoBanner() {
       className="no-print"
       radius={0}
       px="md"
-      py={6}
+      py={0}
       bg="var(--mantine-color-yellow-light)"
       style={{ borderBottom: "1px solid var(--mantine-color-yellow-light-hover)" }}
     >
       <Group justify="space-between" wrap="nowrap" gap="sm">
         <Group gap={8} wrap="nowrap" miw={0}>
           <IconFlask size={16} style={{ flexShrink: 0 }} />
-          <Text size="xs" lh={1.3}>
-            <b>Demo · fake data.</b> You are {capitalise(me.username)} ({membership.role}).{" "}
-            <span style={{ opacity: 0.85 }}>Try: {TRY[membership.role]}</span>
+          <Text size="sm" lh={1.3} truncate>
+            <b>Demo:</b> {capitalise(me.username)}, {membership.role}.
+            <Text span visibleFrom="md" inherit>
+              {" "}
+              Try: {TRY[membership.role]}
+            </Text>
           </Text>
         </Group>
         <Button
-          size="compact-xs"
+          h={44}
           variant="white"
           color="dark"
           onClick={() => logout.mutate(undefined, { onSuccess: () => navigate("/login") })}

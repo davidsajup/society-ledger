@@ -79,6 +79,10 @@ export function RecordPaymentModal({
           <Text size="sm" c="dimmed">
             Currently owes <Money value={flat.outstanding} fw={800} inherit c="var(--mantine-color-text)" />
           </Text>
+          <Text size="sm" c="dimmed">
+            This adds the payment to the society&apos;s books. If you make a mistake, you can reverse it
+            later; it is never erased.
+          </Text>
           <TextInput
             label="Amount received (₹)"
             inputMode="decimal"
@@ -91,7 +95,7 @@ export function RecordPaymentModal({
             rightSectionWidth={86}
             rightSection={
               <Button
-                size="compact-xs"
+                h={40}
                 variant="light"
                 onClick={() => setAmount(flat.outstanding)}
                 type="button"

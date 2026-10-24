@@ -78,16 +78,16 @@ export function ExpensesPage() {
                   <div style={{ minWidth: 0 }}>
                     <Text fw={700}>{expense.description}</Text>
                     <Group gap={6} mt={2}>
-                      <Badge variant="light" size="sm">
+                      <Badge variant="light">
                         {label(expense.category)}
                       </Badge>
                       {reversed && (
-                        <Badge variant="light" color="orange" size="sm">
+                        <Badge variant="light" color="orange">
                           Reversed
                         </Badge>
                       )}
                       {isReversal && (
-                        <Badge variant="light" color="gray" size="sm">
+                        <Badge variant="light" color="gray">
                           Reversal
                         </Badge>
                       )}
@@ -103,7 +103,7 @@ export function ExpensesPage() {
                     </Text>
                     {canWrite && !reversed && !isReversal && (
                       <Button
-                        size="compact-xs"
+                        h={44}
                         variant="subtle"
                         color="red"
                         leftSection={<IconArrowBackUp size={14} />}

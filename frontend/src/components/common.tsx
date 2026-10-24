@@ -13,6 +13,7 @@ import {
 import { IconAlertCircle, IconInbox } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
+import { ApiError } from "../api/client";
 import { formatInr } from "../lib/money";
 
 export function Money({ value, ...props }: { value: string } & TextProps) {
@@ -71,12 +72,14 @@ export function CardSkeleton({ rows = 3 }: { rows?: number }) {
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   return (
-    <Alert color="red" icon={<IconAlertCircle />} title="Something went wrong" radius="lg">
+    <Alert color="red" icon={<IconAlertCircle />} title="We could not load this" radius="lg">
       <Group justify="space-between" wrap="nowrap">
-        <Text size="sm">{error instanceof Error ? error.message : "Please try again."}</Text>
+        <Text size="sm">
+          {error instanceof ApiError ? error.message : "Check your internet connection, then try again."}
+        </Text>
         {onRetry && (
-          <Button size="xs" variant="light" color="red" onClick={onRetry}>
-            Retry
+          <Button variant="light" color="red" onClick={onRetry}>
+            Try again
           </Button>
         )}
       </Group>

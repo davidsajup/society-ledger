@@ -64,7 +64,7 @@ export function FlatsPage() {
                   </Text>
                 </div>
                 <Button
-                  size="compact-md"
+                  h={44}
                   variant="light"
                   leftSection={<IconPencil size={16} />}
                   onClick={() => setEditing({ mode: "edit", flat })}

@@ -201,7 +201,7 @@ export function ActivityPage() {
                               {timeLabel(row.created_at)}
                             </Text>
                             {row.actor === "system" && (
-                              <Badge size="xs" variant="light" color="gray">
+                              <Badge variant="light" color="gray">
                                 automatic
                               </Badge>
                             )}

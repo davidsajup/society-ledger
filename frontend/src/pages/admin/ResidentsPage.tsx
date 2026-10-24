@@ -19,9 +19,7 @@ import { notifications } from "@mantine/notifications";
 import {
   IconCheck,
   IconCopy,
-  IconKey,
   IconShieldLock,
-  IconUserEdit,
   IconUserPlus,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -100,7 +98,7 @@ export function ResidentsPage() {
     <Stack gap="lg">
       <Group justify="space-between">
         <Title order={3}>People &amp; roles</Title>
-        <Button leftSection={<IconUserPlus size={18} />} onClick={() => setAdding(true)}>
+        <Button h={44} leftSection={<IconUserPlus size={18} />} onClick={() => setAdding(true)}>
           Add person
         </Button>
       </Group>
@@ -139,38 +137,38 @@ export function ResidentsPage() {
                       {ROLE_LABEL[member.role]}
                     </Badge>
                     {status && (
-                      <Badge variant="light" color={status.color} size="sm">
+                      <Badge variant="light" color={status.color}>
                         {status.label}
                       </Badge>
                     )}
-                    {/* Nobody changes their own role or flat; another office-bearer does it. */}
-                    {!isMe && (
-                      <Group gap={4} wrap="nowrap">
-                        <Button
-                          size="compact-xs"
-                          variant="subtle"
-                          color="gray"
-                          leftSection={<IconUserEdit size={14} />}
-                          onClick={() => setChanging(member)}
-                        >
-                          Change
-                        </Button>
-                        <Button
-                          size="compact-xs"
-                          variant="subtle"
-                          color="gray"
-                          leftSection={<IconKey size={14} />}
-                          onClick={() => {
-                            setResetError(null);
-                            setResetting(member);
-                          }}
-                        >
-                          New password
-                        </Button>
-                      </Group>
-                    )}
                   </Stack>
                 </Group>
+                {/* Nobody changes their own role or flat; another office-bearer does it. */}
+                {!isMe && (
+                  <Group grow gap="xs" mt="xs">
+                    <Button
+                      h={44}
+                      px="xs"
+                      variant="light"
+                      color="gray"
+                      onClick={() => setChanging(member)}
+                    >
+                      Change role
+                    </Button>
+                    <Button
+                      h={44}
+                      px="xs"
+                      variant="light"
+                      color="gray"
+                      onClick={() => {
+                        setResetError(null);
+                        setResetting(member);
+                      }}
+                    >
+                      New password
+                    </Button>
+                  </Group>
+                )}
               </Card>
             );
           })}

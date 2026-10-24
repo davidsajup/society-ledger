@@ -11,7 +11,7 @@ import {
   Money,
   formatDate,
 } from "../components/common";
-import { describeEntry } from "../components/entries";
+import { describeEntry, entryHeading, friendlyNote } from "../components/entries";
 import { toCents } from "../lib/money";
 
 export function ResidentDashboard() {
@@ -41,13 +41,13 @@ export function ResidentDashboard() {
           </ThemeIcon>
           <Text fw={700}>Flat {flat.label}</Text>
         </Group>
-        <Text size="sm" c="dimmed" fw={600}>
+        <Text size="sm" fw={600}>
           {owes ? "You currently owe" : "You're all paid up"}
         </Text>
         <div className="balance">
           <Money value={outstanding} inherit />
         </div>
-        <Text size="sm" c="dimmed" mt={6}>
+        <Text size="sm" mt={6}>
           {owes
             ? membership.role === "resident"
               ? "Pay your society treasurer, who will record it here."
@@ -59,8 +59,8 @@ export function ResidentDashboard() {
       <Stack gap="xs">
         <Group justify="space-between" align="center">
           <Title order={3}>Recent activity</Title>
-          <Button component={Link} to={`/s/${membership.society_id}/statement`} variant="light" size="compact-md">
-            Full statement &amp; receipts
+          <Button component={Link} to={`/s/${membership.society_id}/statement`} variant="light" h={44}>
+            All payments &amp; receipts
           </Button>
         </Group>
         {recent.length === 0 ? (
@@ -76,17 +76,14 @@ export function ResidentDashboard() {
                       <look.icon size={18} />
                     </ThemeIcon>
                     <div style={{ minWidth: 0 }}>
-                      <Text fw={700} truncate>
-                        {look.title}
-                      </Text>
-                      <Text size="xs" c="dimmed" truncate>
+                      <Text fw={700}>{entryHeading(entry, look)}</Text>
+                      <Text size="xs" c="dimmed">
                         {formatDate(entry.created_at)}
-                        {entry.note ? ` · ${entry.note}` : ""}
+                        {entry.note ? ` · ${friendlyNote(entry.note)}` : ""}
                       </Text>
                     </div>
                   </Group>
-                  <Text fw={800} c={look.sign === "−" ? "teal.7" : undefined} className="money">
-                    {look.sign}
+                  <Text fw={800} c={look.sign === "−" ? "var(--text-positive)" : undefined} className="money">
                     <Money value={entry.amount} />
                   </Text>
                 </Group>

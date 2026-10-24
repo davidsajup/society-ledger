@@ -121,7 +121,7 @@ export function DuesPage() {
                   {flats.map((flat) => (
                     <Table.Tr key={flat.id}>
                       <Table.Td>
-                        <Button component={Link} to={statement(flat)} variant="subtle" size="compact-sm">
+                        <Button component={Link} to={statement(flat)} variant="subtle" h={44}>
                           {flat.label}
                         </Button>
                       </Table.Td>
@@ -131,7 +131,7 @@ export function DuesPage() {
                         </Table.Td>
                       ))}
                       <Table.Td ta="right" fw={800}>
-                        <Money value={flat.outstanding} c={toCents(flat.outstanding) > 0n ? "sunrise.8" : "teal.7"} />
+                        <Money value={flat.outstanding} c={toCents(flat.outstanding) > 0n ? "var(--text-owing)" : "var(--text-positive)"} />
                       </Table.Td>
                     </Table.Tr>
                   ))}
@@ -145,12 +145,12 @@ export function DuesPage() {
             {flats.map((flat) => (
               <Card key={flat.id} padding="md">
                 <Group justify="space-between" wrap="nowrap" mb="sm">
-                  <Button component={Link} to={statement(flat)} variant="subtle" size="compact-md" px={0}>
+                  <Button component={Link} to={statement(flat)} variant="subtle" h={44} px={0}>
                     <Text fw={800} inherit>
                       Flat {flat.label}
                     </Text>
                   </Button>
-                  <Text fw={800} className="money" c={toCents(flat.outstanding) > 0n ? "sunrise.8" : "teal.7"}>
+                  <Text fw={800} className="money" c={toCents(flat.outstanding) > 0n ? "var(--text-owing)" : "var(--text-positive)"}>
                     {toCents(flat.outstanding) > 0n ? (
                       <>
                         owes <Money value={flat.outstanding} inherit />
