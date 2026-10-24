@@ -110,7 +110,7 @@ Tests run against a local Postgres container (never Supabase), because row locki
 
 ```bash
 docker compose up -d db-test
-python -m pytest              # 888 tests
+python -m pytest              # 1,170 tests
 python -m ruff check .
 cd frontend && npm run typecheck && npm run build
 ```

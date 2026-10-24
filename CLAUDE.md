@@ -20,7 +20,7 @@ Frontend (React + TypeScript + Vite, TanStack Query, a component library such as
 
 Stack: Django + DRF (FastAPI not ruled out), PostgreSQL, Redis, Celery with beat, Docker Compose, pytest, GitHub Actions CI, deployed to a cheap VPS or Render.
 
-Out of scope for now: complaints workflow, online payment processing, social features, reminders and real-user onboarding. AI features (natural-language questions over society finances through permission-checked tool calls, and receipt extraction) come only after the main build is finished.
+Out of scope for now: complaints workflow, online payment processing, social features and automatic (scheduled) reminders. Onboarding one real society run locally, and the on-demand reminder email button, are now in scope. AI features (natural-language questions over society finances through permission-checked tool calls, and receipt extraction) come only after the main build is finished.
 
 # Stack decisions (see docs/decisions.md for the reasoning)
 
