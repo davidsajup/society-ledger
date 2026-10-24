@@ -25,6 +25,7 @@ class AuditLog(AppendOnlyModel):
         BILLING_SETTINGS_CHANGED = "billing.settings_changed"
         CLAIM_ACCEPTED = "claim.accepted"
         CLAIM_REJECTED = "claim.rejected"
+        REMINDERS_SENT = "reminders.sent"
 
     society = models.ForeignKey(
         "societies.Society", on_delete=models.PROTECT, related_name="audit_logs"

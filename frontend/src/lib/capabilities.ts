@@ -13,6 +13,7 @@ export type Capability =
   | "manageFlats"
   | "manageMembers"
   | "viewBillingSettings"
+  | "sendReminders"
   | "manageBilling";
 
 const OFFICE_BEARER: Capability[] = [
@@ -20,6 +21,7 @@ const OFFICE_BEARER: Capability[] = [
   "recordPayment",
   "reversePayment",
   "viewBillingSettings",
+  "sendReminders",
 ];
 
 const TABLE: Record<Role, ReadonlySet<Capability>> = {

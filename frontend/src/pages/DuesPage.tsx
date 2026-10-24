@@ -11,7 +11,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { IconCheck } from "@tabler/icons-react";
+import { IconCheck, IconMail } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -19,6 +19,8 @@ import { useDues } from "../api/hooks";
 import type { DuesCell, DuesFlat, DuesStatus } from "../api/types";
 import { useMembership } from "../auth/session";
 import { CardSkeleton, EmptyState, ErrorState, Money } from "../components/common";
+import { RemindersModal } from "../components/RemindersModal";
+import { can } from "../lib/capabilities";
 import { cycleLabel, cycleShortLabel, cycleWord } from "../lib/dates";
 import { compareMoney, formatInr, toCents } from "../lib/money";
 
@@ -54,6 +56,8 @@ export function DuesPage() {
   const societyId = useMembership().society_id;
   const dues = useDues(societyId);
   const [only, setOnly] = useState<"all" | "due">("due");
+  const [reminding, setReminding] = useState(false);
+  const role = useMembership().role;
 
   const flats = useMemo(() => {
     const all = [...(dues.data?.flats ?? [])].sort(
@@ -90,6 +94,17 @@ export function DuesPage() {
             ]}
           />
         </Group>
+        {can(role, "sendReminders") && summary.flats_with_dues > 0 && (
+          <Button
+            variant="light"
+            h={44}
+            mt="sm"
+            leftSection={<IconMail size={18} />}
+            onClick={() => setReminding(true)}
+          >
+            Remind flats that owe
+          </Button>
+        )}
         <Text size="xs" c="dimmed" mt="sm">
           Payments are applied to the oldest dues first. This view is calculated from the ledger,
           so it always agrees with each flat&apos;s balance.
@@ -175,6 +190,8 @@ export function DuesPage() {
           </SimpleGrid>
         </>
       )}
+
+      <RemindersModal opened={reminding} societyId={societyId} onClose={() => setReminding(false)} />
     </Stack>
   );
 }

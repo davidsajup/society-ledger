@@ -110,6 +110,10 @@ The president opens **People → Billing** to change how often the society is bi
 
 A resident taps **I have paid** on their home page and gives the amount, date, method and a reference. Nothing changes until the president, secretary or treasurer opens **Payments → Reported by residents**, checks the bank or cash book, and chooses **Check and record** (the amount can be corrected to what the bank shows) or **Do not accept** (a reason is required, and the resident reads it). Nobody answers a report for the flat they live in. A flat can have at most 3 reports waiting.
 
+### Reminder emails
+
+**Dues → Remind flats that owe** shows how many flats owe, how many can be emailed, how many were reminded in the last 7 days and how many have no email on file, then sends on confirmation. Emails print to the console until real sending is configured. To send real email, set `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS` and `DEFAULT_FROM_EMAIL` in the environment (see `.env.example`). Never put them in a file you commit or paste them into a chat.
+
 ## 8. Check it against your Excel
 
 Compare the Overview totals (billed, collected, outstanding) with your sheet for the first cycle before relying on it.

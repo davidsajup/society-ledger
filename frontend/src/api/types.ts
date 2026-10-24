@@ -114,6 +114,23 @@ export interface PlatformManager {
   login_status: LoginStatus;
 }
 
+/** What pressing "Remind flats that owe" would do right now. Counts only: never an address. */
+export interface ReminderPreview {
+  flats_owing: number;
+  flats_cooling_down: number; // reminded in the last 7 days
+  flats_without_email: number;
+  flats_eligible: number;
+  recipients: number; // emails that would go out
+  batch_limit: number; // the most emails one press sends
+}
+
+export interface ReminderResult extends Omit<ReminderPreview, "batch_limit"> {
+  flats_reminded: number;
+  flats_deferred: number; // eligible, but left for the next press
+  sent: number;
+  failed: number;
+}
+
 export type ClaimMethod = "upi" | "bank" | "cash" | "cheque" | "other";
 export type ClaimStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 

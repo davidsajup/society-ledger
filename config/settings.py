@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.onboarding",
     "apps.imports",
     "apps.claims",
+    "apps.reminders",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -103,6 +104,7 @@ REST_FRAMEWORK = {
         "password": "10/min",
         "import": "60/hour",
         "claim": "30/hour",
+        "reminder": "6/hour",
     },
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
@@ -121,6 +123,19 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=1, minute=0),  # 01:00 Asia/Kolkata, every day
     },
 }
+
+# --- Email (dues reminders) ---------------------------------------------------------------
+# Real sending is configured ONLY through the environment, never in a file. With nothing set,
+# emails are printed to the console, so nothing leaves the machine by accident.
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Society Ledger <no-reply@localhost>")
 
 # --- Demo mode (passwordless logins for fake demo accounts; see apps/accounts/demo.py) ---
 # OFF by default. Turn on only for a database that holds fake data.

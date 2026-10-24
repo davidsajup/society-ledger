@@ -18,6 +18,8 @@ import type {
   IssuedLogin,
   LedgerEntry,
   PaymentClaim,
+  ReminderPreview,
+  ReminderResult,
   ClaimMethod,
   Me,
   Member,
@@ -178,6 +180,27 @@ export function useFlats(societyId: number) {
   return useQuery({
     queryKey: keys.flats(societyId),
     queryFn: () => api<Flat[]>(`${base(societyId)}/flats/`),
+  });
+}
+
+// --- Dues reminders ---------------------------------------------------------------------------
+
+export function useReminderPreview(societyId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["reminders", societyId, "preview"] as const,
+    queryFn: () => api<ReminderPreview>(`${base(societyId)}/dues-reminders/preview/`),
+    enabled,
+    staleTime: 0, // always fresh when the dialog opens: the cooldown changes what is eligible
+    gcTime: 0,
+  });
+}
+
+export function useSendReminders(societyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<ReminderResult>(`${base(societyId)}/dues-reminders/`, { method: "POST", body: {} }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", societyId] }),
   });
 }
 

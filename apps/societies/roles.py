@@ -18,6 +18,7 @@ VIEW_AUDIT = "view_audit"
 VIEW_OWN_DUES = "view_own_dues"
 SUBMIT_CLAIM = "submit_claim"
 RESOLVE_CLAIM = "resolve_claim"
+SEND_REMINDERS = "send_reminders"
 
 # What every office-bearer can do. Payments are deliberately included for all three, so that
 # when one of them pays their own dues another can record it (nobody may record or reverse a
@@ -31,6 +32,7 @@ _OFFICE_BEARER = {
     VIEW_OWN_DUES,
     SUBMIT_CLAIM,
     RESOLVE_CLAIM,
+    SEND_REMINDERS,
     RECORD_PAYMENT,
     REVERSE_ENTRY,
 }

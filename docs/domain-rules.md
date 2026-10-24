@@ -36,6 +36,17 @@ A claim is a resident's note that their flat paid. It is not money: it never cha
 - A claim is answered exactly once. Accepting, rejecting and withdrawing all lock the claim row first (claim, then flat) and refuse a claim that is no longer waiting.
 - The database refuses impossible states: an accepted claim must point at its payment, a rejected one must have a reason, a waiting one has no resolver.
 
+## Dues reminders
+
+The president, secretary or treasurer can email every flat that owes money with one button.
+
+- A flat is emailed only if it currently owes money, someone living there has an email on file, and it was not reminded in the last 7 days. Each person gets their own email, one per distinct address, and each email names only that flat and its amount.
+- The preview and the result show counts only. Nobody who presses the button sees an address, so a treasurer can send reminders without seeing contact details.
+- A press covers at most 100 emails. If more flats are due the result says how many are left, and pressing again sends exactly the rest.
+- Each email is recorded first (pending), then sent, then marked sent or failed. A failed email does not count as a reminder, so pressing again retries it. A pending record older than 15 minutes (a crash) stops counting too.
+- Two people pressing at once cannot cause a double send: the society row is locked while the batch is prepared.
+- No email address is stored in the reminder records or the audit log. The audit row holds counts only.
+
 ## Billing
 - A society is billed every month or every quarter (`billing_cycle_months` 1 or 3). A flat's `maintenance_amount` is the amount for one cycle.
 - Billing for a `(society, period)` pair happens **exactly once**, where `period` is the first day of a cycle (any month if monthly; 1 January, April, July or October if quarterly). A unique constraint on BillingRun enforces this, and the job is safe to run twice, every day, or concurrently.

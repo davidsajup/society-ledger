@@ -25,6 +25,7 @@ from apps.expenses.models import Expense
 from apps.expenses.services import record_expense
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services import record_charge
+from apps.reminders.models import DuesReminder, ReminderBatch
 from apps.societies.models import Flat, Membership, Society
 from apps.societies.services import add_member
 
@@ -59,6 +60,8 @@ ROUTES = {
     "claim-accept": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
     "claim-reject": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
     "claim-withdraw": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
+    "reminder-preview": lambda b: {"society_id": b["society"].id},
+    "reminder-send": lambda b: {"society_id": b["society"].id},
 }
 
 PAYLOAD = {
@@ -107,6 +110,10 @@ def snapshot(society):
         ),
         "audit": list(
             AuditLog.objects.for_society(society).order_by("id").values("id", "action", "object_id")
+        ),
+        "reminders": (
+            list(DuesReminder.objects.for_society(society).order_by("id").values("id", "status")),
+            ReminderBatch.objects.for_society(society).count(),
         ),
         "claims": list(
             PaymentClaim.objects.for_society(society)

@@ -256,6 +256,7 @@ def test_every_role_has_exactly_the_capabilities_in_the_design():
         roles.VIEW_FLATS, roles.VIEW_ALL_BALANCES, roles.VIEW_EXPENSES, roles.VIEW_AUDIT,
         roles.VIEW_OWN_DUES, roles.RECORD_PAYMENT, roles.REVERSE_ENTRY,
         roles.VIEW_BILLING_SETTINGS, roles.SUBMIT_CLAIM, roles.RESOLVE_CLAIM,
+        roles.SEND_REMINDERS,
     }
     assert roles.ROLE_PERMISSIONS == {
         "president": office | {roles.MANAGE_FLATS, roles.MANAGE_MEMBERS, roles.MANAGE_BILLING},
