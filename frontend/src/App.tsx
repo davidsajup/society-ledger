@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { RequireAuth, RequireFlat, RequireRole } from "./auth/session";
+import { RequireAuth, RequireFlat, RequirePlatformAdmin, RequireRole } from "./auth/session";
 import { AppLayout } from "./layout/AppLayout";
 import { ActivityPage } from "./pages/ActivityPage";
 import { PeoplePage } from "./pages/admin/PeoplePage";
@@ -14,6 +14,7 @@ import { StatementPage } from "./pages/StatementPage";
 import { ExpensesPage } from "./pages/treasurer/ExpensesPage";
 import { OverviewPage } from "./pages/treasurer/OverviewPage";
 import { PaymentsPage } from "./pages/treasurer/PaymentsPage";
+import { PlatformPage } from "./pages/platform/PlatformPage";
 
 const EVERYONE = ["president", "secretary", "treasurer", "resident"] as const;
 const OFFICE_BEARERS = ["president", "secretary", "treasurer"] as const;
@@ -27,6 +28,11 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
+
+        {/* The super admin onboards societies. They are a member of none (and see no money). */}
+        <Route element={<RequirePlatformAdmin />}>
+          <Route path="/platform" element={<PlatformPage />} />
+        </Route>
 
         {/* The society in the URL mirrors the API (/api/societies/<id>/...). The server still
             checks every request; these guards only keep the UI from showing broken pages. */}

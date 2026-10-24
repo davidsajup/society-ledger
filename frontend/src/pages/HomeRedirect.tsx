@@ -10,6 +10,9 @@ export function HomeRedirect() {
   const navigate = useNavigate();
   const logout = useLogout();
 
+  // The super admin belongs to no society: their home is the onboarding page.
+  if (me.is_platform_admin) return <Navigate to="/platform" replace />;
+
   if (me.memberships.length === 1) {
     return <Navigate to={homePath(me.memberships[0])} replace />;
   }

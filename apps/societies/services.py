@@ -7,7 +7,7 @@ from apps.audit import services as audit
 from apps.audit.models import AuditLog
 
 from . import roles
-from .models import Membership
+from .models import Membership, Society
 
 
 def add_member(*, society, user, role, flat=None):
@@ -180,3 +180,56 @@ def change_member(*, society, actor, membership, role=None, flat=_UNSET):
         },
     )
     return membership, True
+
+
+class NotPlatformAdmin(Exception):
+    """Only the super admin may onboard societies."""
+
+
+@transaction.atomic
+def create_society(*, actor, name, slug, president_name):
+    """Onboard a society: the society itself and its first president's login. Nothing else.
+
+    Returns (society, president_membership, temporary_password). The super admin hands the
+    login to the president, who then creates flats and every other account. The president has
+    no flat yet (the society has none) and can be given one later by another office-bearer.
+    One transaction: if the president's login fails, no empty society is left behind.
+    The password exists in plain text only here and in the one response that carries it.
+    """
+    # Defense in depth: the API already checks this, but the service must not rely on it.
+    if not (actor.is_superuser and actor.is_active):
+        raise NotPlatformAdmin("Only the super admin can create a society.")
+
+    society = Society(name=name.strip(), slug=slug.strip())
+    society.full_clean(exclude=["created_at"])  # slug format and uniqueness, errors per field
+    society.save()
+    audit.record(
+        society=society,
+        actor=actor,
+        action=AuditLog.Action.SOCIETY_CREATED,
+        object_type="society",
+        object_id=society.pk,
+        data={"name": society.name, "slug": society.slug},
+    )
+    membership, temporary_password = create_member_login(
+        society=society,
+        actor=actor,
+        name=president_name,
+        role=Membership.Role.PRESIDENT,
+    )
+    return society, membership, temporary_password
+
+
+@transaction.atomic
+def reissue_manager_credentials(*, actor, membership):
+    """Super admin: a new temporary password for a society's president or secretary.
+
+    Only for the people who run the society (a lost first login), never for residents or
+    treasurers, and through the same refusals as reissue_credentials (no staff accounts, no one
+    who also belongs to another society).
+    """
+    if not (actor.is_superuser and actor.is_active):
+        raise NotPlatformAdmin("Only the super admin can do this.")
+    if membership.role not in roles.roles_with(roles.MANAGE_MEMBERS):
+        raise CredentialsNotAllowed("The super admin can only reissue a president or secretary.")
+    return reissue_credentials(society=membership.society, actor=actor, membership=membership)

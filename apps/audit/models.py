@@ -20,6 +20,7 @@ class AuditLog(AppendOnlyModel):
         MEMBER_CREATED = "member.created"
         CREDENTIALS_REISSUED = "credentials.reissued"
         MEMBER_UPDATED = "member.updated"
+        SOCIETY_CREATED = "society.created"
 
     society = models.ForeignKey(
         "societies.Society", on_delete=models.PROTECT, related_name="audit_logs"

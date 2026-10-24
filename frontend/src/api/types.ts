@@ -14,6 +14,7 @@ export interface Me {
   id: number;
   username: string;
   must_change_password: boolean;
+  is_platform_admin: boolean; // the super admin: onboards societies, sees no money
   memberships: Membership[];
 }
 
@@ -99,6 +100,30 @@ export interface Member {
   login_status: LoginStatus;
   role: Role;
   flat: number | null;
+}
+
+/** A society as the super admin sees it: counts and logins, never money. */
+export interface PlatformManager {
+  member_id: number;
+  name: string;
+  username: string;
+  role: Role;
+  login_status: LoginStatus;
+}
+
+export interface PlatformSociety {
+  id: number;
+  name: string;
+  slug: string;
+  created_at: string;
+  flat_count: number;
+  member_count: number;
+  managers: PlatformManager[];
+}
+
+export interface CreatedSociety extends IssuedLogin {
+  society: { id: number; name: string; slug: string };
+  president_name: string;
 }
 
 /** The ONE response that carries a temporary password. It is never available again. */

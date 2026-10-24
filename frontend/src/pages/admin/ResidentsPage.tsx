@@ -3,8 +3,6 @@ import {
   Badge,
   Button,
   Card,
-  Code,
-  CopyButton,
   Group,
   Modal,
   SegmentedControl,
@@ -16,12 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import {
-  IconCheck,
-  IconCopy,
-  IconShieldLock,
-  IconUserPlus,
-} from "@tabler/icons-react";
+import { IconUserPlus } from "@tabler/icons-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { formErrors, generalError } from "../../api/client";
@@ -37,7 +30,7 @@ import type { IssuedLogin, LoginStatus, Member, Role } from "../../api/types";
 import { useMembership, useSession } from "../../auth/session";
 import { CardSkeleton, EmptyState, ErrorState } from "../../components/common";
 import { ConfirmModal } from "../../components/ConfirmModal";
-import { calendarDay } from "../../lib/dates";
+import { CredentialsDialog } from "../../components/CredentialsDialog";
 import { ROLE_LABEL, ROLE_OPTIONS } from "../../lib/capabilities";
 
 const ROLE_COLOR: Record<Role, string> = {
@@ -212,77 +205,6 @@ export function ResidentsPage() {
 
       <CredentialsDialog issued={issued} onDone={() => setIssued(null)} />
     </Stack>
-  );
-}
-
-/** Shows a temporary password exactly once. The server cannot show it again, and neither can we. */
-function CredentialsDialog({
-  issued,
-  onDone,
-}: {
-  issued: { login: IssuedLogin; person: string } | null;
-  onDone: () => void;
-}) {
-  const login = issued?.login;
-  const expires = login ? calendarDay(login.expires_at) : "";
-  const details = login
-    ? `Username: ${login.username}\nTemporary password: ${login.temp_password}\nValid until ${expires}. You will be asked to choose your own password at first login.`
-    : "";
-
-  return (
-    <Modal
-      opened={issued !== null}
-      onClose={onDone}
-      closeOnClickOutside={false}
-      closeOnEscape={false}
-      withCloseButton={false}
-      title={`Login details for ${issued?.person ?? ""}`}
-      centered
-    >
-      {login && (
-        <Stack gap="md">
-          <Alert color="yellow" icon={<IconShieldLock size={18} />} title="Shown only once">
-            Give these to {issued.person} privately. The password cannot be shown again; if it is
-            lost, issue a new one.
-          </Alert>
-
-          <div>
-            <Text size="sm" c="dimmed">
-              Username
-            </Text>
-            <Code fz="md" block>
-              {login.username}
-            </Code>
-          </div>
-          <div>
-            <Text size="sm" c="dimmed">
-              Temporary password
-            </Text>
-            <Code fz="lg" fw={700} block>
-              {login.temp_password}
-            </Code>
-          </div>
-          <Text size="sm" c="dimmed">
-            Valid until {expires}. They must choose their own password the first time they sign in.
-          </Text>
-
-          <Group justify="space-between">
-            <CopyButton value={details}>
-              {({ copied, copy }) => (
-                <Button
-                  variant="light"
-                  leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                  onClick={copy}
-                >
-                  {copied ? "Copied" : "Copy login details"}
-                </Button>
-              )}
-            </CopyButton>
-            <Button onClick={onDone}>I&apos;ve saved it</Button>
-          </Group>
-        </Stack>
-      )}
-    </Modal>
   );
 }
 

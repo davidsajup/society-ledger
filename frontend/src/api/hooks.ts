@@ -10,10 +10,12 @@ import type {
   ExpenseList,
   Flat,
   FlatLedger,
+  CreatedSociety,
   IssuedLogin,
   LedgerEntry,
   Me,
   Member,
+  PlatformSociety,
   RecentPayment,
   Role,
   Summary,
@@ -35,6 +37,7 @@ export const keys = {
   billingRuns: (s: number) => ["billing-runs", s] as const,
   flats: (s: number) => ["flats", s] as const,
   members: (s: number) => ["members", s] as const,
+  platformSocieties: ["platform-societies"] as const,
 };
 
 // --- Session -----------------------------------------------------------------------------
@@ -313,5 +316,35 @@ export function useChangeMember(societyId: number) {
       void queryClient.invalidateQueries({ queryKey: keys.members(societyId) });
       void queryClient.invalidateQueries({ queryKey: keys.audit(societyId) });
     },
+  });
+}
+
+// --- Super admin (platform) ---------------------------------------------------------------
+
+export function usePlatformSocieties() {
+  return useQuery({
+    queryKey: keys.platformSocieties,
+    queryFn: () => api<PlatformSociety[]>("/platform/societies/"),
+  });
+}
+
+export function useCreateSociety() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { name: string; slug: string; president_name: string }) =>
+      api<CreatedSociety>("/platform/societies/", { method: "POST", body: v }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.platformSocieties }),
+  });
+}
+
+export function useReissueManager() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { societyId: number; memberId: number }) =>
+      api<IssuedLogin>(`/platform/societies/${v.societyId}/managers/${v.memberId}/reissue/`, {
+        method: "POST",
+        body: {},
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.platformSocieties }),
   });
 }

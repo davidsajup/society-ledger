@@ -60,6 +60,13 @@ export function RequireRole({ roles }: { roles: Role[] }) {
   );
 }
 
+/** For /platform: the super admin only. The server checks too; this keeps the UI honest. */
+export function RequirePlatformAdmin() {
+  const { me } = useSession();
+  if (!me.is_platform_admin) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
 /**
  * For pages about the person's OWN flat (home, statement, receipts). Any role qualifies, as
  * long as they live in a flat: an office-bearer is also a resident who pays dues.

@@ -28,6 +28,8 @@ def serialize_me(user):
         "id": user.id,
         "username": user.username,
         "must_change_password": user.must_change_password,
+        # The super admin onboards societies; they belong to none and see no money.
+        "is_platform_admin": user.is_superuser,
         "memberships": [
             {
                 "society_id": m.society_id,

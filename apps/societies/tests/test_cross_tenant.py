@@ -187,6 +187,23 @@ def test_user_with_no_membership_anywhere_is_locked_out(tenant_b):
         assert stranger.get(url).status_code == 404
 
 
+@pytest.mark.parametrize("method", METHODS)
+@pytest.mark.parametrize("route", ROUTES)
+def test_the_super_admin_also_gets_404_on_every_society_route(route, method, tenant_b):
+    """The platform operator onboards societies but is a member of none, so sees no money.
+
+    Being a superuser must not be a tenant escape hatch: same 404, same untouched data.
+    """
+    super_admin = get_user_model().objects.create_superuser(username="root", password="x")
+    before = snapshot(tenant_b["society"])
+    url = reverse(route, kwargs=ROUTES[route](tenant_b))
+
+    response = getattr(client_for(super_admin), method)(url, PAYLOAD)
+
+    assert response.status_code == 404
+    assert snapshot(tenant_b["society"]) == before
+
+
 def test_leaked_response_bodies_never_mention_other_tenants_data(attacker, tenant_b):
     """Even a legitimate list call in A must not contain a single byte of B's data."""
     Flat.objects.create(society=attacker["society"], label="A-1")
