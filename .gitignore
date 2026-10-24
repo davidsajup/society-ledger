@@ -20,3 +20,7 @@ frontend/dist/
 # Real society data: sheets with names, phones and emails, and database dumps. Never commit.
 data/
 backups/
+
+# Design tooling and its saved reviews live on this machine only, never in the project history.
+.claude/
+.impeccable/
