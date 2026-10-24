@@ -49,7 +49,7 @@ def today(monkeypatch):
 @pytest.fixture
 def world():
     society = Society.objects.create(
-        name="Varma Heights", slug="varma", billing_cycle_months=3, billing_start=JAN
+        name="Green Heights", slug="green-heights", billing_cycle_months=3, billing_start=JAN
     )
     flat = Flat.objects.create(society=society, label="A-1", maintenance_amount=D("4500.00"))
     users = {}

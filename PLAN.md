@@ -12,7 +12,7 @@
 
 **Done:** M0 bootstrap; M1 tenancy (capability roles, tenant-scoped endpoints, session login, cross-tenant suite); M2 ledger (append-only LedgerEntry with DB trigger, `record_payment` with row lock + idempotency, reversals, object-level permissions); M3 billing (BillingRun unique per society+period, one-transaction idempotent `run_billing`, Celery + beat daily fan-out, Redis); M4 (append-only Expense with reversals, AuditLog written inside every money transaction); reports (summary, activity, dues by month, billing runs) and `seed_demo`; frontend: login, resident dashboard, treasurer overview/payments/expenses, people & roles (president, secretary, treasurer, resident; office-bearers have flats and cannot record their own flat's payments), plus flat statements with running balance, printable receipts (void if reversed), dues-by-month grid, an activity timeline with billing history, a demo mode (one-click role logins, off by default, with a banner), and admin-issued logins (random one-time passwords, forced change at first login, 7-day expiry, re-issue).
 
-Budget: ~10 h/week on this project. Job applications start early February 2027 (~15 weekends from 2026-10-20).
+Budget: limited weekly time, so the simplest design that teaches the concept properly wins.
 Rule: backend milestones (M1–M5) are protected. If we slip, M6 (frontend) shrinks first.
 
 | # | Weeks | Milestone | Done when this test/proof exists |

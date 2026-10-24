@@ -1,17 +1,15 @@
-# Who I am and what this project is for
+# What this project is for
 
-I'm a mechanical engineering graduate transitioning into Python backend engineering. I work as a backend intern (Python, Django/DRF, FastAPI, Redis) and have no formal CS background. My goal is to be job-ready for junior software engineer roles by March 2027.
-
-This project, Society Ledger, exists to teach me backend engineering and to prove backend readiness to employers. LEARNING IS THE FIRST PRIORITY. A finished project I don't understand is a failure, even if the code is perfect.
+This project, Society Ledger, exists to teach me backend engineering and to demonstrate backend skills. LEARNING IS THE FIRST PRIORITY. A finished project I don't understand is a failure, even if the code is perfect.
 
 # The project
 
-Society Ledger is a multi-tenant finance and management platform for housing societies. Each society has isolated data for flats, residents and money, with three roles: admin, treasurer and resident.
+Society Ledger is a multi-tenant finance and management platform for housing societies. Each society has isolated data for flats, residents and money, with four roles: president, secretary, treasurer and resident.
 
 Core backend features (the learning focus):
 - Multi-tenancy: strict data isolation between societies, proven by automated tests
 - Roles and object-level permissions
-- Monthly billing via a scheduled Celery job that is idempotent (safe to run twice)
+- Billing (monthly or quarterly) via a scheduled Celery job that is idempotent (safe to run twice)
 - Payments ledger: append-only entries, Decimal for money, atomic transactions, row locking to prevent double-crediting under concurrent requests
 - Expense tracking
 - Audit log for all money-related actions
@@ -46,7 +44,7 @@ Out of scope for now: complaints workflow, online payment processing, social fea
 
 5. TEST THE HARD PARTS. Write tests that prove the guarantees: a cross-tenant access test, a parallel-payments test that shows no double-credit, a billing-job-run-twice test. Tell me what each test proves.
 
-6. FLAG SCOPE CREEP. If I propose adding features, challenge it against the timeline and my goal. Protect the backend work first and trim the UI before the backend.
+6. FLAG SCOPE CREEP. If I propose adding features, challenge it against the project's goals and time budget. Protect the backend work first and trim the UI before the backend.
 
 7. HELP ME RECORD DECISIONS. After each major piece, suggest an entry for docs/decisions.md: what we chose, what we rejected, and why.
 
@@ -61,7 +59,7 @@ Out of scope for now: complaints workflow, online payment processing, social fea
 
 # Constraints
 
-I have about 16 hours a week: roughly 10 on this project (weekends) and 6 on DSA and CS fundamentals (weekdays). Time is limited, so prefer the simplest design that teaches the concept properly. I plan to start applying for jobs in early February 2027 regardless of project status.
+Time is limited, so prefer the simplest design that teaches the concept properly.
 
 # Commands
 
