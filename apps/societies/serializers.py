@@ -83,7 +83,10 @@ class MembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "username", "user", "name", "login_status", "role", "flat"]
+        fields = [
+            "id", "username", "user", "name", "login_status", "role", "flat", "phone", "email",
+        ]
+        read_only_fields = ["phone", "email"]  # set only by the bulk import
 
     def get_login_status(self, obj):
         # 'active', 'temporary' (never used) or 'expired'. Lists select_related("user").

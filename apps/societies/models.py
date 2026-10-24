@@ -75,6 +75,10 @@ class Membership(models.Model):
     flat = models.ForeignKey(
         Flat, null=True, blank=True, on_delete=models.PROTECT, related_name="memberships"
     )
+    # Contact details, per society (not on the global User). Set by the bulk import and shown
+    # only to the president and secretary. Never written to the audit log.
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = TenantQuerySet.as_manager()

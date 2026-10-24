@@ -38,7 +38,7 @@ class CredentialsNotAllowed(Exception):
 
 
 @transaction.atomic
-def create_member_login(*, society, actor, name, role, flat=None):
+def create_member_login(*, society, actor, name, role, flat=None, phone="", email=""):
     """Create a NEW user with a random temporary password and make them a member.
 
     Returns (membership, temporary_password). The password exists in plain text only here and
@@ -59,7 +59,9 @@ def create_member_login(*, society, actor, name, role, flat=None):
     )
     temporary_password = set_temporary_password(user)
     user.save()
-    membership = Membership.objects.create(society=society, user=user, role=role, flat=flat)
+    membership = Membership.objects.create(
+        society=society, user=user, role=role, flat=flat, phone=phone, email=email
+    )
     audit.record(
         society=society,
         actor=actor,

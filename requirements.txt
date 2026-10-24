@@ -3,3 +3,5 @@ djangorestframework>=3.16,<3.17
 psycopg[binary]>=3.2,<3.3
 django-environ>=0.12,<0.13
 celery[redis]>=5.4,<6
+openpyxl>=3.1,<3.2  # reads .xlsx uploads for the bulk import (never writes)
+defusedxml>=0.7,<0.8  # openpyxl uses it to refuse malicious XML in uploaded workbooks

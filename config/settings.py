@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "apps.expenses",
     "apps.reports",
     "apps.onboarding",
+    "apps.imports",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -95,7 +96,12 @@ REST_FRAMEWORK = {
     ],
     # Throttle scopes used with ScopedRateThrottle. Behind a proxy (Render) the client IP comes
     # from X-Forwarded-For: set NUM_PROXIES at deploy time or all users share one bucket.
-    "DEFAULT_THROTTLE_RATES": {"login": "10/min", "demo": "30/min", "password": "10/min"},
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+        "demo": "30/min",
+        "password": "10/min",
+        "import": "60/hour",
+    },
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,
 }

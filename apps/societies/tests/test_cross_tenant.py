@@ -21,6 +21,7 @@ from apps.audit.models import AuditLog
 from apps.expenses import urls as expenses_urls
 from apps.expenses.models import Expense
 from apps.expenses.services import record_expense
+from apps.imports import urls as imports_urls
 from apps.ledger import urls as ledger_urls
 from apps.ledger.models import LedgerEntry
 from apps.ledger.services import record_charge
@@ -52,6 +53,8 @@ ROUTES = {
     "person-create": lambda b: {"society_id": b["society"].id},
     "member-reissue": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
     "member-detail": lambda b: {"society_id": b["society"].id, "member_id": b["member"].id},
+    "import-preview": lambda b: {"society_id": b["society"].id},
+    "import-confirm": lambda b: {"society_id": b["society"].id},
 }
 
 PAYLOAD = {
@@ -222,7 +225,7 @@ def test_leaked_response_bodies_never_mention_other_tenants_data(attacker, tenan
 
 
 def test_every_societies_route_is_covered_by_this_suite():
-    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls, reports_urls)
+    modules = (societies_urls, ledger_urls, expenses_urls, audit_urls, reports_urls, imports_urls)
     declared = {p.name for module in modules for p in module.urlpatterns}
     assert declared == set(ROUTES), (
         f"Routes without cross-tenant tests: {declared - set(ROUTES)}; "

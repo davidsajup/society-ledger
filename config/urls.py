@@ -11,4 +11,5 @@ urlpatterns = [
     path("api/societies/<int:society_id>/", include("apps.expenses.urls")),
     path("api/societies/<int:society_id>/", include("apps.audit.urls")),
     path("api/societies/<int:society_id>/", include("apps.reports.urls")),
+    path("api/societies/<int:society_id>/", include("apps.imports.urls")),
 ]
