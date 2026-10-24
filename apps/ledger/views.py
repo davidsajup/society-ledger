@@ -57,6 +57,7 @@ class PaymentCreateView(SocietyScopedView, APIView):
                 actor=request.user,
                 idempotency_key=key,
                 note=data.validated_data["note"],
+                confirm_duplicate=data.validated_data["confirm_duplicate"],
             )
         except services.PaymentExceedsOutstanding as exc:
             raise ValidationError(
@@ -66,7 +67,23 @@ class PaymentCreateView(SocietyScopedView, APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         except services.IdempotencyKeyReused:
             return Response(
-                {"detail": "Idempotency-Key was already used for a different request."},
+                {
+                    "code": "idempotency_key_reused",
+                    "detail": "Idempotency-Key was already used for a different request.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        except services.PossibleDuplicatePayment as exc:
+            # Nothing was written. Resend with confirm_duplicate=true to record it anyway.
+            return Response(
+                {
+                    "code": "possible_duplicate",
+                    "detail": str(exc),
+                    "previous": {
+                        "amount": str(exc.previous.amount),
+                        "created_at": exc.previous.created_at.isoformat(),
+                    },
+                },
                 status=status.HTTP_409_CONFLICT,
             )
 

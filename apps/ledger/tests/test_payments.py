@@ -151,7 +151,11 @@ def test_parallel_payments_never_credit_more_than_is_owed(widen_race_window):
 
     def pay(_):
         try:
-            record_payment(society=society, flat=flat, amount=D("30.00"), actor=treasurer)
+            # These are ten equal amounts on purpose; the duplicate warning is not under test.
+            record_payment(
+                society=society, flat=flat, amount=D("30.00"), actor=treasurer,
+                confirm_duplicate=True,
+            )
             return "ok"
         except PaymentExceedsOutstanding:
             return "rejected"

@@ -48,9 +48,10 @@ def bill(world, *periods):
         run_billing(society=world["society"], period=period)
 
 
-def pay(world, flat, amount):
+def pay(world, flat, amount, **kwargs):
     entry, _ = record_payment(
-        society=world["society"], flat=flat, amount=D(amount), actor=world["people"]["treasurer"]
+        society=world["society"], flat=flat, amount=D(amount), actor=world["people"]["treasurer"],
+        **kwargs,
     )
     return entry
 
@@ -314,5 +315,5 @@ def test_ledger_entries_say_who_recorded_them_without_extra_queries(world):
 
     baseline = count()
     for _ in range(5):
-        pay(world, world["a"], "10.00")
+        pay(world, world["a"], "10.00", confirm_duplicate=True)
     assert count() == baseline

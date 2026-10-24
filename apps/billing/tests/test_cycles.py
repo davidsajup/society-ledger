@@ -171,7 +171,7 @@ def test_a_quarterly_charge_is_payable_in_installments_but_never_overpaid(quarte
     for month in ("Oct", "Nov", "Dec"):
         record_payment(
             society=society, flat=flat, amount=D("1500.00"), actor=treasurer,
-            idempotency_key=f"installment-{month}",
+            idempotency_key=f"installment-{month}", confirm_duplicate=True,  # same amount, 3x
         )
 
     assert outstanding_for_flat(flat) == D("0.00")

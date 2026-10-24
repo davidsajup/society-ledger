@@ -200,10 +200,21 @@ function useInvalidateMoney(societyId: number) {
 export function useRecordPayment(societyId: number) {
   const invalidate = useInvalidateMoney(societyId);
   return useMutation({
-    mutationFn: (v: { flatId: number; amount: string; note: string; idempotencyKey: string }) =>
+    mutationFn: (v: {
+      flatId: number;
+      amount: string;
+      note: string;
+      idempotencyKey: string;
+      /** Only after the person has seen the "possible duplicate" warning and said yes. */
+      confirmDuplicate?: boolean;
+    }) =>
       api<LedgerEntry>(`${base(societyId)}/flats/${v.flatId}/payments/`, {
         method: "POST",
-        body: { amount: v.amount, note: v.note },
+        body: {
+          amount: v.amount,
+          note: v.note,
+          ...(v.confirmDuplicate ? { confirm_duplicate: true } : {}),
+        },
         // The same key is reused if this exact submission is retried: no double payment.
         headers: { "Idempotency-Key": v.idempotencyKey },
       }),

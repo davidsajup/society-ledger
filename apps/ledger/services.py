@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.audit import services as audit
 from apps.audit.models import AuditLog
@@ -18,6 +21,18 @@ class PaymentExceedsOutstanding(LedgerError):
     def __init__(self, outstanding):
         self.outstanding = outstanding
         super().__init__(f"Payment exceeds the amount owed ({outstanding}).")
+
+
+# How far back a payment of the same amount on the same flat counts as "probably the same one".
+DUPLICATE_WINDOW = timedelta(minutes=10)
+
+
+class PossibleDuplicatePayment(LedgerError):
+    """The same amount was recorded for this flat moments ago; the caller must confirm."""
+
+    def __init__(self, previous):
+        self.previous = previous
+        super().__init__("A payment of this amount was just recorded for this flat.")
 
 
 class SelfPaymentNotAllowed(LedgerError):
@@ -76,14 +91,40 @@ def record_charge(*, society, flat, amount, actor=None, note="", billing_run=Non
     )
 
 
+def find_recent_duplicate(society, flat, amount):
+    """A live payment of exactly `amount` on this flat inside DUPLICATE_WINDOW, or None.
+
+    "Live" means not reversed and not itself a reversal: once someone has corrected a payment,
+    re-recording the right one must not be questioned.
+    """
+    return (
+        LedgerEntry.objects.for_society(society)
+        .filter(
+            flat=flat,
+            kind=LedgerEntry.Kind.PAYMENT,
+            amount=amount,
+            reverses__isnull=True,
+            reversed_by__isnull=True,
+            created_at__gte=timezone.now() - DUPLICATE_WINDOW,
+        )
+        .order_by("-created_at", "-id")
+        .first()
+    )
+
+
 @transaction.atomic
-def record_payment(*, society, flat, amount, actor, idempotency_key=None, note=""):
+def record_payment(
+    *, society, flat, amount, actor, idempotency_key=None, note="", confirm_duplicate=False
+):
     """Append a payment for `flat`. Returns (entry, created).
 
     Guarantees:
     * never records more than the flat owes, even under concurrent requests;
     * a retry with the same idempotency_key returns the original entry (created=False)
-      instead of recording the payment twice.
+      instead of recording the payment twice;
+    * the same amount on the same flat within DUPLICATE_WINDOW is refused with
+      PossibleDuplicatePayment unless `confirm_duplicate` is true. This catches what the key
+      cannot: a person starting over (new form, new key) after a reply was lost.
 
     How: lock the flat row first. Every payment for this flat then waits its turn, and because
     Postgres runs at READ COMMITTED, the balance recomputed AFTER the lock sees every payment
@@ -116,6 +157,11 @@ def record_payment(*, society, flat, amount, actor, idempotency_key=None, note="
     if amount > owed:
         raise PaymentExceedsOutstanding(owed)
 
+    # After the lock, so two simultaneous submissions queue and the second sees the first.
+    duplicate = find_recent_duplicate(society, flat, amount)
+    if duplicate is not None and not confirm_duplicate:
+        raise PossibleDuplicatePayment(duplicate)
+
     try:
         with transaction.atomic():  # savepoint, so a clash does not poison the outer transaction
             entry = LedgerEntry.objects.create(
@@ -136,6 +182,11 @@ def record_payment(*, society, flat, amount, actor, idempotency_key=None, note="
 
     # Same transaction as the entry above: both commit, or neither does. Replays (returned
     # earlier) are not new actions, so they write no audit row.
+    audit_data = {}
+    if idempotency_key:
+        audit_data["idempotency_key"] = idempotency_key
+    if duplicate is not None:  # only reachable with confirm_duplicate: the override is on record
+        audit_data["confirmed_duplicate_of"] = duplicate.pk
     audit.record(
         society=society,
         actor=actor,
@@ -144,7 +195,7 @@ def record_payment(*, society, flat, amount, actor, idempotency_key=None, note="
         object_type="ledger_entry",
         object_id=entry.pk,
         amount=amount,
-        data={"idempotency_key": idempotency_key} if idempotency_key else {},
+        data=audit_data,
     )
     return entry, True
 

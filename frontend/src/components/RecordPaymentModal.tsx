@@ -1,9 +1,11 @@
-import { Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
+import { Alert, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
 import { useRecordPayment } from "../api/hooks";
+import { timeLabel } from "../lib/dates";
 import { isValidAmount, normaliseAmount, toCents } from "../lib/money";
 import { Money } from "./common";
 
@@ -11,6 +13,19 @@ export interface PayableFlat {
   id: number;
   label: string;
   outstanding: string;
+}
+
+/** What the server sends with a 409 `possible_duplicate`: the payment recorded moments ago. */
+interface EarlierPayment {
+  amount: string;
+  createdAt: string;
+}
+
+function earlierPaymentFrom(error: unknown): EarlierPayment | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const data = error.data as { code?: string; previous?: { amount: string; created_at: string } };
+  if (data?.code !== "possible_duplicate" || !data.previous) return null;
+  return { amount: data.previous.amount, createdAt: data.previous.created_at };
 }
 
 export function RecordPaymentModal({
@@ -26,6 +41,7 @@ export function RecordPaymentModal({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [earlier, setEarlier] = useState<EarlierPayment | null>(null);
   // One key per opening of the form. If the request is retried (double tap, flaky network),
   // the server sees the same key and records the payment once.
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
@@ -35,6 +51,7 @@ export function RecordPaymentModal({
       setAmount("");
       setNote("");
       setServerError(null);
+      setEarlier(null);
       setIdempotencyKey(crypto.randomUUID());
       record.reset();
     }
@@ -51,25 +68,40 @@ export function RecordPaymentModal({
       ? "That is more than the flat owes."
       : null;
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
+  function send(confirmDuplicate: boolean) {
     if (!flat || !isValidAmount(trimmed) || tooMuch) return;
     setServerError(null);
+    setEarlier(null);
     record.mutate(
-      { flatId: flat.id, amount: normaliseAmount(trimmed), note: note.trim(), idempotencyKey },
+      {
+        flatId: flat.id,
+        amount: normaliseAmount(trimmed),
+        note: note.trim(),
+        idempotencyKey,
+        confirmDuplicate,
+      },
       {
         onSuccess: () => {
           notifications.show({ color: "teal", title: "Payment recorded", message: `Flat ${flat.label}` });
           onClose();
         },
-        onError: (error) =>
+        onError: (error) => {
+          // The server wrote nothing. The same key is safe to reuse: only a stored payment uses it.
+          const duplicate = earlierPaymentFrom(error);
+          if (duplicate) return setEarlier(duplicate);
           setServerError(
             error instanceof ApiError
               ? (error.fieldError("amount") ?? error.message)
               : "Could not record the payment.",
-          ),
+          );
+        },
       },
     );
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    send(false);
   }
 
   return (
@@ -88,7 +120,10 @@ export function RecordPaymentModal({
             inputMode="decimal"
             placeholder="0.00"
             value={amount}
-            onChange={(e) => setAmount(e.currentTarget.value)}
+            onChange={(e) => {
+              setAmount(e.currentTarget.value);
+              setEarlier(null); // a different amount is a different question
+            }}
             error={clientError ?? serverError}
             data-autofocus
             required
@@ -97,7 +132,10 @@ export function RecordPaymentModal({
               <Button
                 h={40}
                 variant="light"
-                onClick={() => setAmount(flat.outstanding)}
+                onClick={() => {
+                  setAmount(flat.outstanding);
+                  setEarlier(null);
+                }}
                 type="button"
               >
                 Full amount
@@ -111,6 +149,33 @@ export function RecordPaymentModal({
             value={note}
             onChange={(e) => setNote(e.currentTarget.value)}
           />
+          {earlier && (
+            <Alert
+              color="yellow"
+              icon={<IconAlertTriangle size={18} />}
+              title="Is this the same payment?"
+              role="alert"
+            >
+              <Text size="sm">
+                <Money value={earlier.amount} fw={700} inherit /> was already recorded for this flat
+                at {timeLabel(earlier.createdAt)}. Record another one only if the flat really paid
+                again.
+              </Text>
+              <Group mt="sm" gap="sm">
+                <Button
+                  color="yellow.8"
+                  loading={record.isPending}
+                  onClick={() => send(true)}
+                  type="button"
+                >
+                  Yes, record it again
+                </Button>
+                <Button variant="default" onClick={onClose} type="button">
+                  No, cancel
+                </Button>
+              </Group>
+            </Alert>
+          )}
           <Group justify="flex-end">
             <Button variant="default" onClick={onClose} type="button">
               Cancel
@@ -118,7 +183,7 @@ export function RecordPaymentModal({
             <Button
               type="submit"
               loading={record.isPending}
-              disabled={!isValidAmount(trimmed) || tooMuch}
+              disabled={!isValidAmount(trimmed) || tooMuch || earlier !== null}
             >
               Record payment
             </Button>

@@ -19,7 +19,8 @@ These are invariants. Code that breaks one of them is a bug, even if no test cat
 - Recording a payment is a single atomic operation: lock the flat row (`select_for_update`), recompute what is owed, check, write the entry, write the audit row (M4), then commit.
 - A payment may never exceed what the flat currently owes (no advance payments or credit). The same rule applies to reversals: a charge cannot be reversed while the flat has paid it.
 - An entry is reversed at most once, and a reversal cannot itself be reversed.
-- A retried payment carrying the same `Idempotency-Key` returns the original entry and records nothing new. The same key with a different request is a conflict (409).
+- A retried payment carrying the same `Idempotency-Key` returns the original entry and records nothing new. The same key with a different request is a conflict (409, `code: idempotency_key_reused`). A key counts as used only once a payment was written with it: a rejected request stores nothing.
+- The same amount on the same flat within 10 minutes of a live payment (not reversed, not a reversal entry) is refused with a 409 `possible_duplicate` until the caller resends with `confirm_duplicate: true`. It is checked after the flat lock and after the overpayment check, never for an idempotent replay, and a confirmed override is recorded in the audit row (`confirmed_duplicate_of`). It is a warning, not a ban: two equal installments are legitimate.
 - Residents may read only their own flat's ledger. Another flat in the same society is a 404, identical to a flat that does not exist.
 
 ## Billing

@@ -12,6 +12,8 @@ class PaymentInputSerializer(serializers.Serializer):
         max_digits=12, decimal_places=2, min_value=Decimal("0.01")
     )
     note = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    # True only after the person has seen the "possible duplicate" warning and chosen to go on.
+    confirm_duplicate = serializers.BooleanField(required=False, default=False)
 
 
 class ReversalInputSerializer(serializers.Serializer):

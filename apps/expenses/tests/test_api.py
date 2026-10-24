@@ -210,7 +210,8 @@ def test_audit_list_runs_a_constant_number_of_queries(world):
     baseline = count_queries()
     for _ in range(5):
         record_payment(
-            society=world["society"], flat=world["flat"], amount=D("1.00"), actor=treasurer_user
+            society=world["society"], flat=world["flat"], amount=D("1.00"), actor=treasurer_user,
+            confirm_duplicate=True,
         )
 
     assert count_queries() == baseline

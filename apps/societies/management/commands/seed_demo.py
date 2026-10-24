@@ -126,6 +126,7 @@ class Command(BaseCommand):
                     amount=rent,
                     actor=recorder_for(label),
                     note="Maintenance",
+                    confirm_duplicate=True,  # the same rent, several months in a row, on purpose
                 )
                 if index == 1:
                     reversed_one, reversed_label = payment, label
