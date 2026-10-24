@@ -17,6 +17,8 @@ import type {
   CreatedSociety,
   IssuedLogin,
   LedgerEntry,
+  PaymentClaim,
+  ClaimMethod,
   Me,
   Member,
   PlatformSociety,
@@ -40,6 +42,9 @@ export const keys = {
   audit: (s: number) => ["audit", s] as const,
   billingRuns: (s: number) => ["billing-runs", s] as const,
   billingSettings: (s: number) => ["billing-settings", s] as const,
+  // Every claims query starts with ["claims", society], so one invalidation refreshes them all.
+  flatClaims: (s: number, flatId: number) => ["claims", s, "flat", flatId] as const,
+  claimQueue: (s: number) => ["claims", s, "queue"] as const,
   flats: (s: number) => ["flats", s] as const,
   members: (s: number) => ["members", s] as const,
   platformSocieties: ["platform-societies"] as const,
@@ -173,6 +178,92 @@ export function useFlats(societyId: number) {
   return useQuery({
     queryKey: keys.flats(societyId),
     queryFn: () => api<Flat[]>(`${base(societyId)}/flats/`),
+  });
+}
+
+// --- Payment claims -----------------------------------------------------------------------------
+
+export function useFlatClaims(societyId: number, flatId: number | null) {
+  return useQuery({
+    queryKey: keys.flatClaims(societyId, flatId ?? 0),
+    queryFn: () => api<PaymentClaim[]>(`${base(societyId)}/flats/${flatId}/payment-claims/`),
+    enabled: flatId !== null,
+  });
+}
+
+/** The claims waiting for an office-bearer to check. */
+export function useClaimQueue(societyId: number) {
+  return useQuery({
+    queryKey: keys.claimQueue(societyId),
+    queryFn: () => api<PaymentClaim[]>(`${base(societyId)}/payment-claims/?status=pending`),
+  });
+}
+
+function useInvalidateClaims(societyId: number) {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ["claims", societyId] });
+}
+
+export function useSubmitClaim(societyId: number, flatId: number | null) {
+  const invalidate = useInvalidateClaims(societyId);
+  return useMutation({
+    mutationFn: (v: {
+      amount: string;
+      paid_on: string;
+      method: ClaimMethod;
+      reference: string;
+      idempotencyKey: string;
+    }) => {
+      const { idempotencyKey, ...body } = v;
+      return api<PaymentClaim>(`${base(societyId)}/flats/${flatId}/payment-claims/`, {
+        method: "POST",
+        body,
+        // A double tap sends the same key, so it makes one claim, not two.
+        headers: { "Idempotency-Key": idempotencyKey },
+      });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useAcceptClaim(societyId: number) {
+  const invalidateMoney = useInvalidateMoney(societyId);
+  const invalidateClaims = useInvalidateClaims(societyId);
+  return useMutation({
+    mutationFn: (v: { claimId: number; amount: string; confirmDuplicate: boolean }) =>
+      api<PaymentClaim>(`${base(societyId)}/payment-claims/${v.claimId}/accept/`, {
+        method: "POST",
+        body: {
+          amount: v.amount,
+          ...(v.confirmDuplicate ? { confirm_duplicate: true } : {}),
+        },
+      }),
+    // Accepting writes a real payment, so every money view changes too.
+    onSuccess: () => Promise.all([invalidateMoney(), invalidateClaims()]),
+  });
+}
+
+export function useRejectClaim(societyId: number) {
+  const invalidate = useInvalidateClaims(societyId);
+  return useMutation({
+    mutationFn: (v: { claimId: number; reason: string }) =>
+      api<PaymentClaim>(`${base(societyId)}/payment-claims/${v.claimId}/reject/`, {
+        method: "POST",
+        body: { reason: v.reason },
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useWithdrawClaim(societyId: number) {
+  const invalidate = useInvalidateClaims(societyId);
+  return useMutation({
+    mutationFn: (v: { claimId: number }) =>
+      api<PaymentClaim>(`${base(societyId)}/payment-claims/${v.claimId}/withdraw/`, {
+        method: "POST",
+        body: {},
+      }),
+    onSuccess: invalidate,
   });
 }
 

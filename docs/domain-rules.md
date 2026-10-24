@@ -23,6 +23,19 @@ These are invariants. Code that breaks one of them is a bug, even if no test cat
 - The same amount on the same flat within 10 minutes of a live payment (not reversed, not a reversal entry) is refused with a 409 `possible_duplicate` until the caller resends with `confirm_duplicate: true`. It is checked after the flat lock and after the overpayment check, never for an idempotent replay, and a confirmed override is recorded in the audit row (`confirmed_duplicate_of`). It is a warning, not a ban: two equal installments are legitimate.
 - Residents may read only their own flat's ledger. Another flat in the same society is a 404, identical to a flat that does not exist.
 
+## Payment claims
+
+A claim is a resident's note that their flat paid. It is not money: it never changes a balance and never writes a ledger entry.
+
+- Only someone who lives in a flat can claim for it (office-bearers too, for their own flat). Anyone else gets a 404 that looks like a flat that does not exist.
+- A claim has an amount (at most what the flat owes), the date it was paid (not in the future, not over a year ago), a method (UPI, bank, cash, cheque, other) and an optional reference. A flat can have at most 3 claims waiting.
+- The president, secretary or treasurer answers a claim, never for the flat they live in:
+  - **Accept** records the payment through the normal payment rules and links it to the claim, in one transaction. The amount can be corrected to what the bank shows; the claim keeps both figures. The ledger entry carries the key `claim-<id>`, so it can be recorded only once. The duplicate warning applies as it does for any payment.
+  - **Reject** needs a reason, which the resident reads.
+- A resident can withdraw their own claim while it is waiting.
+- A claim is answered exactly once. Accepting, rejecting and withdrawing all lock the claim row first (claim, then flat) and refuse a claim that is no longer waiting.
+- The database refuses impossible states: an accepted claim must point at its payment, a rejected one must have a reason, a waiting one has no resolver.
+
 ## Billing
 - A society is billed every month or every quarter (`billing_cycle_months` 1 or 3). A flat's `maintenance_amount` is the amount for one cycle.
 - Billing for a `(society, period)` pair happens **exactly once**, where `period` is the first day of a cycle (any month if monthly; 1 January, April, July or October if quarterly). A unique constraint on BillingRun enforces this, and the job is safe to run twice, every day, or concurrently.

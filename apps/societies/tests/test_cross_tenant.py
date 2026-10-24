@@ -14,10 +14,13 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import URLResolver, reverse
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 import config.urls as project_urls
 from apps.audit.models import AuditLog
+from apps.claims.models import PaymentClaim
+from apps.claims.services import submit_claim
 from apps.expenses.models import Expense
 from apps.expenses.services import record_expense
 from apps.ledger.models import LedgerEntry
@@ -51,6 +54,11 @@ ROUTES = {
     "import-preview": lambda b: {"society_id": b["society"].id},
     "import-confirm": lambda b: {"society_id": b["society"].id},
     "billing-settings": lambda b: {"society_id": b["society"].id},
+    "flat-claims": lambda b: {"society_id": b["society"].id, "flat_id": b["flat"].id},
+    "claim-list": lambda b: {"society_id": b["society"].id},
+    "claim-accept": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
+    "claim-reject": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
+    "claim-withdraw": lambda b: {"society_id": b["society"].id, "claim_id": b["claim"].id},
 }
 
 PAYLOAD = {
@@ -63,6 +71,8 @@ PAYLOAD = {
     "description": "HACKED",
     "name": "HACKED",
     "paid_on": "2026-10-01",
+    "method": "upi",
+    "reason": "HACKED",
 }
 
 
@@ -98,6 +108,11 @@ def snapshot(society):
         "audit": list(
             AuditLog.objects.for_society(society).order_by("id").values("id", "action", "object_id")
         ),
+        "claims": list(
+            PaymentClaim.objects.for_society(society)
+            .order_by("id")
+            .values("id", "status", "amount", "ledger_entry_id")
+        ),
     }
 
 
@@ -114,9 +129,13 @@ def tenant_b():
         society=society, actor=admin, category="repairs", description="Lift motor",
         amount=Decimal("500.00"), paid_on=date(2026, 10, 1),
     )
+    claim, _ = submit_claim(
+        society=society, flat=flat, claimant=resident, amount=Decimal("50.00"),
+        paid_on=timezone.localdate(), method="upi", reference="UTR1",
+    )
     return {
         "society": society, "flat": flat, "entry": entry, "expense": expense, "member": member,
-        "admin": admin, "resident": resident,
+        "admin": admin, "resident": resident, "claim": claim,
     }
 
 

@@ -255,13 +255,13 @@ def test_every_role_has_exactly_the_capabilities_in_the_design():
     office = {
         roles.VIEW_FLATS, roles.VIEW_ALL_BALANCES, roles.VIEW_EXPENSES, roles.VIEW_AUDIT,
         roles.VIEW_OWN_DUES, roles.RECORD_PAYMENT, roles.REVERSE_ENTRY,
-        roles.VIEW_BILLING_SETTINGS,
+        roles.VIEW_BILLING_SETTINGS, roles.SUBMIT_CLAIM, roles.RESOLVE_CLAIM,
     }
     assert roles.ROLE_PERMISSIONS == {
         "president": office | {roles.MANAGE_FLATS, roles.MANAGE_MEMBERS, roles.MANAGE_BILLING},
         "secretary": office | {roles.MANAGE_FLATS, roles.MANAGE_MEMBERS},
         "treasurer": office | {roles.RECORD_EXPENSE},
-        "resident": {roles.VIEW_OWN_DUES},
+        "resident": {roles.VIEW_OWN_DUES, roles.SUBMIT_CLAIM},
     }
     assert roles.roles_with(roles.RECORD_EXPENSE) == ["treasurer"]
     assert roles.roles_with(roles.MANAGE_BILLING) == ["president"]  # the president alone decides

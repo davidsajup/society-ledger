@@ -8,6 +8,7 @@ import type { FlatBalance } from "../../api/types";
 import { useMembership } from "../../auth/session";
 import { can } from "../../lib/capabilities";
 import { CardSkeleton, EmptyState, ErrorState, Money } from "../../components/common";
+import { ClaimsWaitingNotice } from "../../components/ClaimsQueue";
 import { RecordPaymentModal, type PayableFlat } from "../../components/RecordPaymentModal";
 import { compareMoney, percent, toCents } from "../../lib/money";
 
@@ -105,6 +106,7 @@ export function OverviewPage() {
 
   return (
     <Stack gap="lg">
+      <ClaimsWaitingNotice />
       <Card>
         <Title order={2} fz={{ base: 22, sm: 26 }} lh={1.25}>
           {allClear ? (

@@ -16,6 +16,8 @@ VIEW_EXPENSES = "view_expenses"
 VIEW_ALL_BALANCES = "view_all_balances"
 VIEW_AUDIT = "view_audit"
 VIEW_OWN_DUES = "view_own_dues"
+SUBMIT_CLAIM = "submit_claim"
+RESOLVE_CLAIM = "resolve_claim"
 
 # What every office-bearer can do. Payments are deliberately included for all three, so that
 # when one of them pays their own dues another can record it (nobody may record or reverse a
@@ -27,6 +29,8 @@ _OFFICE_BEARER = {
     VIEW_AUDIT,
     VIEW_BILLING_SETTINGS,
     VIEW_OWN_DUES,
+    SUBMIT_CLAIM,
+    RESOLVE_CLAIM,
     RECORD_PAYMENT,
     REVERSE_ENTRY,
 }
@@ -37,7 +41,7 @@ ROLE_PERMISSIONS = {
     "secretary": _OFFICE_BEARER | {MANAGE_FLATS, MANAGE_MEMBERS},
     # Only the treasurer records spending (money out).
     "treasurer": _OFFICE_BEARER | {RECORD_EXPENSE},
-    "resident": {VIEW_OWN_DUES},
+    "resident": {VIEW_OWN_DUES, SUBMIT_CLAIM},
 }
 
 

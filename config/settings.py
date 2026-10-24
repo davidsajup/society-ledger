@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.reports",
     "apps.onboarding",
     "apps.imports",
+    "apps.claims",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -101,6 +102,7 @@ REST_FRAMEWORK = {
         "demo": "30/min",
         "password": "10/min",
         "import": "60/hour",
+        "claim": "30/hour",
     },
     # Serialize Decimal as strings so money never passes through a float in JSON clients.
     "COERCE_DECIMAL_TO_STRING": True,

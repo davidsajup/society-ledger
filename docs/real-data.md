@@ -106,6 +106,10 @@ Payments are recorded by the president, secretary or treasurer (never for the fl
 
 The president opens **People → Billing** to change how often the society is billed and when billing starts. The secretary and treasurer can read it (the treasurer reaches it from the link on the Dues page). It can be changed only until the first billing run exists; after that it is fixed. Changing the cycle asks the president to confirm that every flat's amount has been checked, because each amount is for one cycle.
 
+### Payments reported by residents
+
+A resident taps **I have paid** on their home page and gives the amount, date, method and a reference. Nothing changes until the president, secretary or treasurer opens **Payments → Reported by residents**, checks the bank or cash book, and chooses **Check and record** (the amount can be corrected to what the bank shows) or **Do not accept** (a reason is required, and the resident reads it). Nobody answers a report for the flat they live in. A flat can have at most 3 reports waiting.
+
 ## 8. Check it against your Excel
 
 Compare the Overview totals (billed, collected, outstanding) with your sheet for the first cycle before relying on it.

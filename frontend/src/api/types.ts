@@ -114,6 +114,27 @@ export interface PlatformManager {
   login_status: LoginStatus;
 }
 
+export type ClaimMethod = "upi" | "bank" | "cash" | "cheque" | "other";
+export type ClaimStatus = "pending" | "accepted" | "rejected" | "withdrawn";
+
+/** A resident's note that their flat paid. It is not money until an office-bearer records it. */
+export interface PaymentClaim {
+  id: number;
+  flat: number;
+  flat_label: string;
+  claimed_by_name: string;
+  amount: string;
+  paid_on: string; // a date, YYYY-MM-DD
+  method: ClaimMethod;
+  reference: string;
+  status: ClaimStatus;
+  resolution_note: string; // why it was rejected
+  accepted_amount: string | null; // what was recorded, if it differs from `amount`
+  ledger_entry_id: number | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 /** How the society is billed, and whether that can still be changed. */
 export interface BillingSettings {
   billing_cycle_months: number;

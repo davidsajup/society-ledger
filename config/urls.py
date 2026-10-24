@@ -13,4 +13,5 @@ urlpatterns = [
     path("api/societies/<int:society_id>/", include("apps.reports.urls")),
     path("api/societies/<int:society_id>/", include("apps.imports.urls")),
     path("api/societies/<int:society_id>/", include("apps.billing.urls")),
+    path("api/societies/<int:society_id>/", include("apps.claims.urls")),
 ]

@@ -1,9 +1,12 @@
 import { Button, Card, Group, Stack, Text, ThemeIcon, Title } from "@mantine/core";
-import { IconCircleCheck, IconReceipt } from "@tabler/icons-react";
+import { IconCircleCheck, IconCoin, IconReceipt } from "@tabler/icons-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useLedger } from "../api/hooks";
 import { useMembership } from "../auth/session";
+import { ClaimPaymentModal } from "../components/ClaimPaymentModal";
+import { MyClaims } from "../components/MyClaims";
 import {
   CardSkeleton,
   EmptyState,
@@ -17,6 +20,7 @@ import { toCents } from "../lib/money";
 export function ResidentDashboard() {
   const membership = useMembership();
   const ledger = useLedger(membership.society_id, membership.flat_id);
+  const [claiming, setClaiming] = useState(false);
 
   if (membership.flat_id === null) {
     return <EmptyState title="No flat linked">Ask your society admin to link your flat.</EmptyState>;
@@ -50,11 +54,25 @@ export function ResidentDashboard() {
         <Text size="sm" mt={6}>
           {owes
             ? membership.role === "resident"
-              ? "Pay your society treasurer, who will record it here."
+              ? "Pay your society as usual, then tap \"I have paid\" so the treasurer can record it here."
               : "Ask another office-bearer to record your payment."
             : "Nothing is due. Thank you!"}
         </Text>
       </Card>
+
+      {owes && (
+        <Button
+          size="lg"
+          h={52}
+          variant="light"
+          leftSection={<IconCoin size={20} />}
+          onClick={() => setClaiming(true)}
+        >
+          I have paid
+        </Button>
+      )}
+
+      <MyClaims />
 
       <Stack gap="xs">
         <Group justify="space-between" align="center">
@@ -92,6 +110,15 @@ export function ResidentDashboard() {
           })
         )}
       </Stack>
+
+      <ClaimPaymentModal
+        opened={claiming}
+        societyId={membership.society_id}
+        flatId={flat.id}
+        flatLabel={flat.label}
+        outstanding={outstanding}
+        onClose={() => setClaiming(false)}
+      />
     </Stack>
   );
 }
